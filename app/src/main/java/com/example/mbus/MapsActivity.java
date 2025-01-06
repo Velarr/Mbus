@@ -15,6 +15,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     private GoogleMap mMap;
     private ActivityMapsBinding binding;
+    private LineStreetsActivity lineStreetsActivity;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -27,6 +28,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
+
+        lineStreetsActivity = new LineStreetsActivity();
     }
 
     @Override
@@ -46,11 +49,14 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         mMap.moveCamera(CameraUpdateFactory.newLatLngBounds(madeiraBounds, 0));
 
         // Define o nível de zoom mínimo e máximo
-        mMap.setMinZoomPreference(8.0f);
-        mMap.setMaxZoomPreference(15.0f);
+        mMap.setMinZoomPreference(6.0f); // Permite mais zoom out
+        mMap.setMaxZoomPreference(18.0f); // Permite mais zoom in
 
         // Opcional: Adiciona um marcador no centro da Ilha da Madeira
         LatLng madeiraCenter = new LatLng(32.7607, -16.9599);
         mMap.addMarker(new MarkerOptions().position(madeiraCenter).title("Ilha da Madeira"));
+
+        // Adiciona os caminhos usando a LineStreetsActivity
+        lineStreetsActivity.addPaths(mMap);
     }
 }
