@@ -53,8 +53,8 @@
                 android:gravity="center">
 
                 <ImageView
-                    android:layout_width="48dp"
-                    android:layout_height="48dp"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
                     android:src="@drawable/ic_bus"
                     android:tint="@color/blue"/>
 
@@ -76,8 +76,8 @@
                 android:gravity="center">
 
                 <ImageView
-                    android:layout_width="48dp"
-                    android:layout_height="48dp"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
                     android:src="@drawable/ic_settings"
                     android:tint="@color/blue"/>
 

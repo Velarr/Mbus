@@ -94,27 +94,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         mMap.moveCamera(CameraUpdateFactory.newLatLngBounds(madeiraBounds, 0));
         mMap.setMinZoomPreference(8.0f);
         mMap.setMaxZoomPreference(18.0f);
-
-        // Configura o listener para detectar toques no mapa
-        mMap.setOnMapClickListener(new GoogleMap.OnMapClickListener() {
-            @Override
-            public void onMapClick(LatLng point) {
-                touchCount++;  // Incrementa a contagem dos toques
-
-                if (touchCount == 3) {
-                    // Quando o terceiro toque ocorrer, chama o método para calcular a rota mais próxima
-                    calculateClosestRoute(point);
-
-                    // Resetar a contagem de toques após um pequeno delay
-                    handler.postDelayed(new Runnable() {
-                        @Override
-                        public void run() {
-                            touchCount = 0; // Reseta a contagem de toques
-                        }
-                    }, 500);  // Delay de 500ms (meio segundo) para permitir novos toques
-                }
-            }
-        });
     }
 
     @Override
