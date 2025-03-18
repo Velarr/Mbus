@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "11060967938",
+    "project_id": "busdb-90db1",
+    "storage_bucket": "busdb-90db1.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:11060967938:android:7d26f91fe78ab5b525051b",
+        "android_client_info": {
+          "package_name": "com.example.busdb"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCAlleq9ffwkvvshODi6oEhs2Jv5WHtPkA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:11060967938:android:ad04c6610b6a396525051b",
+        "android_client_info": {
+          "package_name": "com.example.mbus"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCAlleq9ffwkvvshODi6oEhs2Jv5WHtPkA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
