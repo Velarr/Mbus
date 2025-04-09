@@ -12,14 +12,6 @@
         android:layout_height="match_parent" />
 
     <!-- Botão para abrir as opções -->
-    <Button
-        android:id="@+id/btn_options"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Opções"
-        android:layout_alignParentTop="true"
-        android:layout_alignParentStart="true"
-        android:layout_margin="16dp" />
 
     <!-- CardView na parte inferior central -->
     <androidx.cardview.widget.CardView
@@ -47,17 +39,23 @@
 
             <!-- Ícone 1 -->
             <LinearLayout
+                android:id="@+id/btn_bus"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:orientation="vertical"
-                android:gravity="center">
+                android:gravity="center"
+                android:clickable="true"
+                android:focusable="true"
+                android:background="?attr/selectableItemBackground">
 
                 <ImageView
                     android:layout_width="40dp"
                     android:layout_height="40dp"
                     android:src="@drawable/ic_bus"
-                    android:tint="@color/blue"/>
+                    android:background="@android:color/transparent"
+                    android:contentDescription="@string/bus"
+                    android:tint="@color/blue" />
 
                 <TextView
                     android:layout_width="wrap_content"
@@ -65,7 +63,7 @@
                     android:text="@string/bus"
                     android:textSize="14sp"
                     android:textColor="@color/blue"
-                    android:layout_marginTop="8dp"/>
+                    android:layout_marginTop="8dp" />
             </LinearLayout>
 
             <!-- Ícone 2 -->

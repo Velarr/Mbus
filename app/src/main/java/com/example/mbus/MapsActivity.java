@@ -6,6 +6,7 @@ import android.location.Location;
 import android.os.Bundle;
 import android.os.Handler;
 import android.widget.Button;
+import android.widget.LinearLayout;
 
 import androidx.core.app.ActivityCompat;
 import androidx.fragment.app.FragmentActivity;
@@ -45,7 +46,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 .findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
 
-        Button btnOptions = findViewById(R.id.btn_options);
+
+        LinearLayout btnOptions = findViewById(R.id.btn_bus);
+
 
         // Inicializa o FusedLocationProviderClient
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
