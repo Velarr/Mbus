@@ -1,6 +1,7 @@
 {
   "project_info": {
     "project_number": "11060967938",
+    "firebase_url": "https://busdb-90db1-default-rtdb.europe-west1.firebasedatabase.app",
     "project_id": "busdb-90db1",
     "storage_bucket": "busdb-90db1.firebasestorage.app"
   },

@@ -30,6 +30,11 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <activity
+            android:name=".Receiver"
+            android:exported="true"
+            android:label="@string/title_activity_maps">
+        </activity>
     </application>
 
 </manifest>
