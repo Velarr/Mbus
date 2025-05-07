@@ -93,36 +93,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 });
 
         // Firebase: buscar a localização do outro app
-        DatabaseReference locationRef = FirebaseDatabase.getInstance().getReference("locations/secondaryApp");
-
-        locationRef.addValueEventListener(new ValueEventListener() {
-            Marker firebaseMarker;
-
-            @Override
-            public void onDataChange(DataSnapshot snapshot) {
-                if (snapshot.exists()) {
-                    Double lat = snapshot.child("latitude").getValue(Double.class);
-                    Double lng = snapshot.child("longitude").getValue(Double.class);
-
-                    if (lat != null && lng != null) {
-                        LatLng newLocation = new LatLng(lat, lng);
-
-                        if (firebaseMarker == null) {
-                            firebaseMarker = mMap.addMarker(new MarkerOptions()
-                                    .position(newLocation)
-                                    .title("Localização Firebase"));
-                        } else {
-                            firebaseMarker.setPosition(newLocation); // Atualiza a posição do marcador
-                        }
-                    }
-                }
-            }
-
-            @Override
-            public void onCancelled(DatabaseError error) {
-                Toast.makeText(MapsActivity.this, "Erro ao ler localização do Firebase", Toast.LENGTH_SHORT).show();
-            }
-        });
+        Receiver receiver = new Receiver(mMap, this);
+        receiver.startListening();
 
 
         // Definir os limites do mapa para a Madeira
