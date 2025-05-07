@@ -1,11 +1,10 @@
 package com.example.mbus;
 
 import android.content.Context;
-import android.widget.Toast;
+import android.util.Log;
 
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.model.LatLng;
-import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
@@ -17,40 +16,42 @@ public class Receiver {
 
     private final GoogleMap mMap;
     private final Context context;
-    private Marker firebaseMarker;
+    private final DatabaseReference ref;
 
-    public Receiver(GoogleMap map, Context ctx) {
-        this.mMap = map;
-        this.context = ctx;
+    public Receiver(GoogleMap mMap, Context context) {
+        this.mMap = mMap;
+        this.context = context;
+        this.ref = FirebaseDatabase.getInstance().getReference("locations"); // <<== Aqui você inicializa 'ref'
     }
 
     public void startListening() {
-        DatabaseReference locationRef = FirebaseDatabase.getInstance().getReference("locations/secondaryApp");
-
-        locationRef.addValueEventListener(new ValueEventListener() {
+        ref.addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(DataSnapshot snapshot) {
-                if (snapshot.exists()) {
-                    Double lat = snapshot.child("latitude").getValue(Double.class);
-                    Double lng = snapshot.child("longitude").getValue(Double.class);
+                mMap.clear(); // Limpa os marcadores anteriores
 
-                    if (lat != null && lng != null) {
-                        LatLng newLocation = new LatLng(lat, lng);
+                for (DataSnapshot child : snapshot.getChildren()) {
+                    try {
+                        String name = child.getKey();
+                        Double lat = child.child("latitude").getValue(Double.class);
+                        Double lng = child.child("longitude").getValue(Double.class);
 
-                        if (firebaseMarker == null) {
-                            firebaseMarker = mMap.addMarker(new MarkerOptions()
-                                    .position(newLocation)
-                                    .title("Localização Firebase"));
-                        } else {
-                            firebaseMarker.setPosition(newLocation);
+                        if (lat != null && lng != null) {
+                            LatLng position = new LatLng(lat, lng);
+                            mMap.addMarker(new MarkerOptions()
+                                    .position(position)
+                                    .title(name)
+                                    .snippet("Lat: " + lat + ", Lng: " + lng));
                         }
+                    } catch (Exception e) {
+                        Log.e("Receiver", "Erro ao ler dados do usuário: " + e.getMessage());
                     }
                 }
             }
 
             @Override
             public void onCancelled(DatabaseError error) {
-                Toast.makeText(context, "Erro ao ler localização do Firebase", Toast.LENGTH_SHORT).show();
+                Log.e("Receiver", "Erro no Firebase: " + error.getMessage());
             }
         });
     }
