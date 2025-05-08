@@ -33,7 +33,7 @@ public class MapOptionsMenu {
                     listener.onOptionSelected(R.raw.vr_line);
                     return true;
                 } else if (itemId == R.id.option_old_street_line) {
-                    listener.onOptionSelected(R.raw.old_street_line);
+                    listener.onOptionSelected(R.raw.old_street);
                     return true;
                 }
                 return false;

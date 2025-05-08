@@ -2,10 +2,8 @@ package com.example.mbus;
 
 import android.Manifest;
 import android.content.pm.PackageManager;
-import android.location.Location;
 import android.os.Bundle;
 import android.os.Handler;
-import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.Toast;
 
@@ -21,14 +19,6 @@ import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.LatLngBounds;
-import com.google.android.gms.maps.model.Marker;
-import com.google.android.gms.maps.model.MarkerOptions;
-import com.google.android.gms.tasks.OnSuccessListener;
-import com.google.firebase.database.DataSnapshot;
-import com.google.firebase.database.DatabaseError;
-import com.google.firebase.database.DatabaseReference;
-import com.google.firebase.database.FirebaseDatabase;
-import com.google.firebase.database.ValueEventListener;
 import com.google.maps.android.SphericalUtil;
 import com.google.maps.android.data.geojson.GeoJsonFeature;
 import com.google.maps.android.data.geojson.GeoJsonLayer;
@@ -132,7 +122,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         int color;
         if (geoJsonResId == R.raw.vr_line) {
             color = 0xFFFF0000; // Vermelho para a Via Rápida
-        } else if (geoJsonResId == R.raw.old_street_line) {
+        } else if (geoJsonResId == R.raw.old_street) {
             color = 0xFF0000FF; // Azul para o Caminho Velho
         } else {
             color = 0xFF00FF00; // Verde padrão
@@ -157,7 +147,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private void calculateClosestRoute(LatLng userLocation) {
         // Carregar as GeoJsonLayer das rotas
         GeoJsonLayer vrLineLayer = GeoJsonUtils.loadGeoJsonLayer(this, R.raw.vr_line);
-        GeoJsonLayer oldStreetLineLayer = GeoJsonUtils.loadGeoJsonLayer(this, R.raw.old_street_line);
+        GeoJsonLayer oldStreetLineLayer = GeoJsonUtils.loadGeoJsonLayer(this, R.raw.old_street);
 
         // Calcular a distância até as rotas
         double vrDistance = calculateDistanceToGeoJson(userLocation, vrLineLayer);
