@@ -11,6 +11,7 @@ constraintlayout = "2.1.4"
 playServicesLocation = "21.3.0"
 firebaseDatabase = "21.0.0"
 googleGmsGoogleServices = "4.4.2"
+firebaseFirestore = "25.1.4"
 
 [libraries]
 junit = { group = "junit", name = "junit", version.ref = "junit" }
@@ -22,6 +23,7 @@ play-services-maps = { group = "com.google.android.gms", name = "play-services-m
 constraintlayout = { group = "androidx.constraintlayout", name = "constraintlayout", version.ref = "constraintlayout" }
 play-services-location = { group = "com.google.android.gms", name = "play-services-location", version.ref = "playServicesLocation" }
 firebase-database = { group = "com.google.firebase", name = "firebase-database", version.ref = "firebaseDatabase" }
+firebase-firestore = { group = "com.google.firebase", name = "firebase-firestore", version.ref = "firebaseFirestore" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

@@ -8,10 +8,10 @@
             <InsightsFilterSettings>
               <option name="connection">
                 <ConnectionSetting>
-                  <option name="appId" value="PLACEHOLDER" />
-                  <option name="mobileSdkAppId" value="" />
-                  <option name="projectId" value="" />
-                  <option name="projectNumber" value="" />
+                  <option name="appId" value="com.example.mbus" />
+                  <option name="mobileSdkAppId" value="1:11060967938:android:ad04c6610b6a396525051b" />
+                  <option name="projectId" value="busdb-90db1" />
+                  <option name="projectNumber" value="11060967938" />
                 </ConnectionSetting>
               </option>
               <option name="signal" value="SIGNAL_UNSPECIFIED" />

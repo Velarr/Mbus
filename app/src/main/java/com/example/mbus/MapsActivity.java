@@ -1,11 +1,17 @@
 package com.example.mbus;
 
 import android.Manifest;
+import android.content.Context;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.os.Handler;
+import android.util.Log;
 import android.widget.LinearLayout;
 import android.widget.Toast;
+
+import com.google.firebase.firestore.FirebaseFirestore;
+import java.util.HashMap;
+import java.util.Map;
 
 import androidx.core.app.ActivityCompat;
 import androidx.fragment.app.FragmentActivity;
@@ -20,9 +26,16 @@ import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.maps.android.SphericalUtil;
+import com.google.maps.android.clustering.ClusterItem;
+import com.google.maps.android.clustering.ClusterManager;
 import com.google.maps.android.data.geojson.GeoJsonFeature;
 import com.google.maps.android.data.geojson.GeoJsonLayer;
 import com.google.maps.android.data.geojson.GeoJsonLineString;
+
+import java.io.BufferedReader;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+
 
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback {
 
@@ -36,9 +49,10 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
         binding = ActivityMapsBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
+
+        //uploadGeoJsonToFirestore(this, "old_street.geojson", "Caminho Velho", "#0000FF");
 
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
@@ -201,6 +215,38 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         }
         LatLngBounds bounds = builder.build();
         mMap.moveCamera(CameraUpdateFactory.newLatLngBounds(bounds, 50));
+    }
+
+    public void uploadGeoJsonToFirestore(Context context, String fileName, String nomeVisivel, String corHexadecimal) {
+        try {
+            InputStream inputStream = context.getResources().openRawResource(
+                    context.getResources().getIdentifier(fileName.replace(".geojson", ""), "raw", context.getPackageName()));
+            BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
+            StringBuilder jsonBuilder = new StringBuilder();
+            String line;
+            while ((line = reader.readLine()) != null) {
+                jsonBuilder.append(line);
+            }
+            reader.close();
+
+            String geoJsonData = jsonBuilder.toString();
+
+            FirebaseFirestore db = FirebaseFirestore.getInstance();
+
+            Map<String, Object> data = new HashMap<>();
+            data.put("nome", nomeVisivel);
+            data.put("data", geoJsonData);
+            data.put("cor", corHexadecimal);
+
+            db.collection("geojsons")
+                    .document(fileName.replace(".geojson", ""))
+                    .set(data)
+                    .addOnSuccessListener(aVoid -> Log.d("GeoJSON", "GeoJSON enviado ao Firestore!"))
+                    .addOnFailureListener(e -> Log.e("GeoJSON", "Erro ao enviar: " + e.getMessage()));
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
 }
