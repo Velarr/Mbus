@@ -1,6 +1,7 @@
 package com.example.mbus;
 
 import android.content.Context;
+import android.location.Location;
 import android.util.Log;
 
 import com.google.android.gms.maps.GoogleMap;
@@ -21,6 +22,7 @@ public class Receiver {
     private final DatabaseReference ref;
     private final Map<String, String> userLineMap = new HashMap<>();
     private GeoJsonLayer currentLayer;
+    private final List<Marker> todosOsMarcadores = new ArrayList<>();
 
     public Receiver(GoogleMap mMap, Context context) {
         this.mMap = mMap;
@@ -32,25 +34,32 @@ public class Receiver {
         ref.addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(DataSnapshot snapshot) {
-                mMap.clear();
+                mMap.clear(); // Clears all markers, polylines, etc.
+                todosOsMarcadores.clear(); // Clear your local list of markers
                 userLineMap.clear();
+
+                // The problematic lines that used undefined 'nome' and 'latLng' should be removed from here.
 
                 for (DataSnapshot child : snapshot.getChildren()) {
                     try {
-                        String name = child.getKey();
+                        String name = child.getKey(); // 'name' will be used as the title
                         Double lat = child.child("latitude").getValue(Double.class);
                         Double lng = child.child("longitude").getValue(Double.class);
                         String linha = child.child("linha").getValue(String.class);
 
                         if (lat != null && lng != null) {
-                            LatLng position = new LatLng(lat, lng);
+                            LatLng position = new LatLng(lat, lng); // 'position' will be used for the marker
                             Marker marker = mMap.addMarker(new MarkerOptions()
                                     .position(position)
-                                    .title(name)
+                                    .title(name) // Use 'name' here
+                                    .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED)) // If you want this icon for all markers
                                     .snippet("Clique para ver o trajeto"));
 
-                            if (marker != null && linha != null) {
-                                userLineMap.put(marker.getId(), linha);
+                            if (marker != null) { // Check if marker was successfully added
+                                todosOsMarcadores.add(marker); // Add to your list
+                                if (linha != null) {
+                                    userLineMap.put(marker.getId(), linha);
+                                }
                             }
                         }
                     } catch (Exception e) {
@@ -60,11 +69,47 @@ public class Receiver {
 
                 // Listener para clique em marcador
                 mMap.setOnMarkerClickListener(marker -> {
+                    // ... rest of your click listener logic
+                    // Make sure 'todosOsMarcadores' is correctly populated by this point.
+                    LatLng position = marker.getPosition();
+                    List<Marker> overlappingMarkers = new ArrayList<>();
+
+                    // You are iterating over 'todosOsMarcadores' here, so it needs to be populated correctly.
+                    for (Marker otherMarker : todosOsMarcadores) {
+                        if (!otherMarker.equals(marker)) {
+                            float[] results = new float[1];
+                            Location.distanceBetween(
+                                    position.latitude, position.longitude,
+                                    otherMarker.getPosition().latitude, otherMarker.getPosition().longitude,
+                                    results
+                            );
+                            if (results[0] < 10) { // distância menor que 10 metros
+                                overlappingMarkers.add(otherMarker);
+                            }
+                        }
+                    }
+
+                    if (!overlappingMarkers.isEmpty()) {
+                        double angleStep = 360.0 / (overlappingMarkers.size() + 1);
+                        double radius = 0.0001; // ~11 metros
+
+                        int i = 0;
+                        for (Marker overlapping : overlappingMarkers) {
+                            double angle = Math.toRadians(i * angleStep);
+                            double offsetLat = position.latitude + radius * Math.cos(angle);
+                            double offsetLng = position.longitude + radius * Math.sin(angle);
+
+                            overlapping.setPosition(new LatLng(offsetLat, offsetLng));
+                            i++;
+                        }
+                    }
+
                     String linha = userLineMap.get(marker.getId());
                     if (linha != null) {
                         mostrarGeoJson(linha);
                     }
-                    return false; // Retorna false para também mostrar o info window
+
+                    return false;
                 });
             }
 
