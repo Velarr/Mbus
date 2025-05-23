@@ -52,7 +52,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         binding = ActivityMapsBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
 
-        //uploadGeoJsonToFirestore(this, "old_street.geojson", "Caminho Velho", "#0000FF");
+        uploadGeoJsonToFirestore(this, "1", "old_street.geojson", "96","Jardim da Serra","Rodoeste","#0000FF");
 
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
@@ -197,17 +197,15 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     // Método para desenhar a rota escolhida no mapa
     private void drawRoute(GeoJsonLayer selectedRouteLayer) {
-        // Limpar qualquer rota desenhada anteriormente
         mMap.clear();
 
-        // Adicionar a camada da rota escolhida
         selectedRouteLayer.addLayerToMap();
 
         // Ajustar a câmera para a rota escolhida
         LatLngBounds.Builder builder = new LatLngBounds.Builder();
         for (GeoJsonFeature feature : selectedRouteLayer.getFeatures()) {
             if (feature.getGeometry() instanceof GeoJsonLineString) {
-                GeoJsonLineString lineString = (GeoJsonLineString) feature.getGeometry(); // Obtém a geometria da feature
+                GeoJsonLineString lineString = (GeoJsonLineString) feature.getGeometry();
                 for (LatLng latLng : lineString.getCoordinates()) {
                     builder.include(latLng);
                 }
@@ -217,7 +215,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         mMap.moveCamera(CameraUpdateFactory.newLatLngBounds(bounds, 50));
     }
 
-    public void uploadGeoJsonToFirestore(Context context, String fileName, String nomeVisivel, String corHexadecimal) {
+    public void uploadGeoJsonToFirestore(Context context, String id, String fileName, String routenumber, String routeName, String company, String hexadecimalColor) {
         try {
             InputStream inputStream = context.getResources().openRawResource(
                     context.getResources().getIdentifier(fileName.replace(".geojson", ""), "raw", context.getPackageName()));
@@ -234,9 +232,13 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             FirebaseFirestore db = FirebaseFirestore.getInstance();
 
             Map<String, Object> data = new HashMap<>();
-            data.put("nome", nomeVisivel);
+            data.put("id", id);
+            data.put("routenumber", routenumber);
+            data.put("routename", routeName);
+            data.put("company", company);
             data.put("data", geoJsonData);
-            data.put("cor", corHexadecimal);
+            data.put("color", hexadecimalColor);
+
 
             db.collection("geojsons")
                     .document(fileName.replace(".geojson", ""))

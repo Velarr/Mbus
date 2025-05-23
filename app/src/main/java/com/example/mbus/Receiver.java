@@ -34,11 +34,9 @@ public class Receiver {
         ref.addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(DataSnapshot snapshot) {
-                mMap.clear(); // Clears all markers, polylines, etc.
-                todosOsMarcadores.clear(); // Clear your local list of markers
+                mMap.clear();
+                todosOsMarcadores.clear();
                 userLineMap.clear();
-
-                // The problematic lines that used undefined 'nome' and 'latLng' should be removed from here.
 
                 for (DataSnapshot child : snapshot.getChildren()) {
                     try {
@@ -48,15 +46,15 @@ public class Receiver {
                         String linha = child.child("linha").getValue(String.class);
 
                         if (lat != null && lng != null) {
-                            LatLng position = new LatLng(lat, lng); // 'position' will be used for the marker
+                            LatLng position = new LatLng(lat, lng);
                             Marker marker = mMap.addMarker(new MarkerOptions()
                                     .position(position)
-                                    .title(name) // Use 'name' here
+                                    .title(name)
                                     .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED)) // If you want this icon for all markers
                                     .snippet("Clique para ver o trajeto"));
 
-                            if (marker != null) { // Check if marker was successfully added
-                                todosOsMarcadores.add(marker); // Add to your list
+                            if (marker != null) {
+                                todosOsMarcadores.add(marker);
                                 if (linha != null) {
                                     userLineMap.put(marker.getId(), linha);
                                 }
@@ -69,12 +67,9 @@ public class Receiver {
 
                 // Listener para clique em marcador
                 mMap.setOnMarkerClickListener(marker -> {
-                    // ... rest of your click listener logic
-                    // Make sure 'todosOsMarcadores' is correctly populated by this point.
                     LatLng position = marker.getPosition();
                     List<Marker> overlappingMarkers = new ArrayList<>();
 
-                    // You are iterating over 'todosOsMarcadores' here, so it needs to be populated correctly.
                     for (Marker otherMarker : todosOsMarcadores) {
                         if (!otherMarker.equals(marker)) {
                             float[] results = new float[1];
@@ -123,7 +118,7 @@ public class Receiver {
     private void mostrarGeoJson(String nomeArquivo) {
         try {
             if (currentLayer != null) {
-                currentLayer.removeLayerFromMap(); // remove anterior
+                currentLayer.removeLayerFromMap();
             }
 
             // Obtem o id do recurso (R.raw.old_street, por exemplo)
