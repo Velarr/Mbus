@@ -8,7 +8,7 @@ import android.widget.PopupMenu;
 public class MapOptionsMenu {
 
     public interface OnOptionSelectedListener {
-        void onOptionSelected(int geoJsonResId);
+        void onOptionSelected(int kmlResId);
     }
 
     private final Context context;

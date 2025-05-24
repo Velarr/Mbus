@@ -8,12 +8,12 @@ import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.model.*;
 import com.google.firebase.database.*;
 
-import org.json.JSONObject;
+import com.google.maps.android.data.kml.KmlLayer;
+
+import org.xmlpull.v1.XmlPullParserException;
 
 import java.io.InputStream;
 import java.util.*;
-
-import com.google.maps.android.data.geojson.GeoJsonLayer;
 
 public class Receiver {
 
@@ -21,7 +21,7 @@ public class Receiver {
     private final Context context;
     private final DatabaseReference ref;
     private final Map<String, String> userLineMap = new HashMap<>();
-    private GeoJsonLayer currentLayer;
+    private KmlLayer currentLayer;
     private final List<Marker> todosOsMarcadores = new ArrayList<>();
 
     public Receiver(GoogleMap mMap, Context context) {
@@ -40,7 +40,7 @@ public class Receiver {
 
                 for (DataSnapshot child : snapshot.getChildren()) {
                     try {
-                        String name = child.getKey(); // 'name' will be used as the title
+                        String name = child.getKey(); // 'name' será usado como título
                         Double lat = child.child("latitude").getValue(Double.class);
                         Double lng = child.child("longitude").getValue(Double.class);
                         String linha = child.child("linha").getValue(String.class);
@@ -50,7 +50,7 @@ public class Receiver {
                             Marker marker = mMap.addMarker(new MarkerOptions()
                                     .position(position)
                                     .title(name)
-                                    .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED)) // If you want this icon for all markers
+                                    .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED))
                                     .snippet("Clique para ver o trajeto"));
 
                             if (marker != null) {
@@ -101,7 +101,7 @@ public class Receiver {
 
                     String linha = userLineMap.get(marker.getId());
                     if (linha != null) {
-                        mostrarGeoJson(linha);
+                        mostrarKml(linha);
                     }
 
                     return false;
@@ -115,28 +115,28 @@ public class Receiver {
         });
     }
 
-    private void mostrarGeoJson(String nomeArquivo) {
+    private void mostrarKml(String nomeArquivo) {
         try {
             if (currentLayer != null) {
                 currentLayer.removeLayerFromMap();
+                currentLayer = null;
             }
 
-            // Obtem o id do recurso (R.raw.old_street, por exemplo)
+            // Obtem o id do recurso (R.raw.nomedoarquivo, por exemplo)
             int rawResId = context.getResources().getIdentifier(
-                    nomeArquivo.replace(".geojson", ""), "raw", context.getPackageName());
+                    nomeArquivo.replace(".kml", ""), "raw", context.getPackageName());
 
             if (rawResId == 0) {
-                Log.e("Receiver", "Arquivo não encontrado: " + nomeArquivo);
+                Log.e("Receiver", "Arquivo KML não encontrado: " + nomeArquivo);
                 return;
             }
 
             InputStream inputStream = context.getResources().openRawResource(rawResId);
-            JSONObject json = new JSONObject(new Scanner(inputStream).useDelimiter("\\A").next());
-            currentLayer = new GeoJsonLayer(mMap, json);
+            currentLayer = new KmlLayer(mMap, inputStream, context);
             currentLayer.addLayerToMap();
 
-        } catch (Exception e) {
-            Log.e("Receiver", "Erro ao mostrar GeoJSON: " + e.getMessage());
+        } catch (XmlPullParserException | java.io.IOException e) {
+            Log.e("Receiver", "Erro ao mostrar KML: " + e.getMessage());
         }
     }
 }

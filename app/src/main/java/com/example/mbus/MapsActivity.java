@@ -1,22 +1,12 @@
 package com.example.mbus;
 
 import android.Manifest;
-import android.content.Context;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
-import android.os.Handler;
 import android.util.Log;
 import android.widget.LinearLayout;
 import android.widget.Toast;
 
-import com.google.firebase.firestore.FirebaseFirestore;
-import java.util.HashMap;
-import java.util.Map;
-
-import androidx.core.app.ActivityCompat;
-import androidx.fragment.app.FragmentActivity;
-
-import com.example.mbus.databinding.ActivityMapsBinding;
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.maps.CameraUpdateFactory;
@@ -25,17 +15,14 @@ import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.LatLngBounds;
-import com.google.maps.android.SphericalUtil;
-import com.google.maps.android.clustering.ClusterItem;
-import com.google.maps.android.clustering.ClusterManager;
-import com.google.maps.android.data.geojson.GeoJsonFeature;
-import com.google.maps.android.data.geojson.GeoJsonLayer;
-import com.google.maps.android.data.geojson.GeoJsonLineString;
+import com.google.maps.android.data.kml.KmlLayer;
 
-import java.io.BufferedReader;
 import java.io.InputStream;
-import java.io.InputStreamReader;
 
+import androidx.core.app.ActivityCompat;
+import androidx.fragment.app.FragmentActivity;
+
+import com.example.mbus.databinding.ActivityMapsBinding;
 
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback {
 
@@ -43,8 +30,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private ActivityMapsBinding binding;
     private FusedLocationProviderClient fusedLocationClient;
     private static final int LOCATION_PERMISSION_REQUEST_CODE = 1;
-    private int touchCount = 0; // Variável para contar os toques
-    private Handler handler = new Handler(); // Handler para dar um pequeno delay e evitar problemas
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -52,26 +37,15 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         binding = ActivityMapsBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
 
-        uploadGeoJsonToFirestore(this, "1", "old_street.geojson", "96","Jardim da Serra","Rodoeste","#0000FF");
-
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
 
-
         LinearLayout btnOptions = findViewById(R.id.btn_bus);
 
-
-        // Inicializa o FusedLocationProviderClient
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
 
-        // Configura o menu de opções
-        MapOptionsMenu menu = new MapOptionsMenu(this, btnOptions, new MapOptionsMenu.OnOptionSelectedListener() {
-            @Override
-            public void onOptionSelected(int geoJsonResId) {
-                loadGeoJsonLayer(geoJsonResId);
-            }
-        });
+        MapOptionsMenu menu = new MapOptionsMenu(this, btnOptions, kmlResId -> loadKmlLayer(kmlResId));
 
         btnOptions.setOnClickListener(v -> menu.show());
     }
@@ -96,23 +70,12 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                     }
                 });
 
-        // Firebase: buscar a localização do outro app
+        // Inicializa o receiver
         Receiver receiver = new Receiver(mMap, this);
         receiver.startListening();
 
-
-        // Definir os limites do mapa para a Madeira
-        LatLngBounds madeiraBounds = new LatLngBounds(
-                new LatLng(32.50, -17.30), // SW bounds
-                new LatLng(33.10, -16.30)  // NE bounds
-        );
-
-        mMap.setLatLngBoundsForCameraTarget(madeiraBounds);
-        mMap.moveCamera(CameraUpdateFactory.newLatLngBounds(madeiraBounds, 0));
-        mMap.setMinZoomPreference(8.0f);
-        mMap.setMaxZoomPreference(18.0f);
+        configureMap();
     }
-
 
     @Override
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
@@ -120,7 +83,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         if (requestCode == LOCATION_PERMISSION_REQUEST_CODE) {
             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                // Permissão concedida, ativa a localização
                 if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
                     mMap.setMyLocationEnabled(true);
                 }
@@ -129,26 +91,22 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         Toast.makeText(this, "Permissão de localização concedida", Toast.LENGTH_SHORT).show();
     }
 
-    private void loadGeoJsonLayer(int geoJsonResId) {
+    private void loadKmlLayer(int kmlResId) {
         mMap.clear();
         configureMap();
 
-        int color;
-        if (geoJsonResId == R.raw.vr_line) {
-            color = 0xFFFF0000; // Vermelho para a Via Rápida
-        } else if (geoJsonResId == R.raw.old_street) {
-            color = 0xFF0000FF; // Azul para o Caminho Velho
-        } else {
-            color = 0xFF00FF00; // Verde padrão
+        try {
+            KmlLayer layer = new KmlLayer(mMap, kmlResId, getApplicationContext());
+            layer.addLayerToMap();
+        } catch (Exception e) {
+            Log.e("KML", "Erro ao carregar arquivo KML: " + e.getMessage());
         }
-
-        GeoJsonUtils.addGeoJsonLayer(this, mMap, geoJsonResId, color);
     }
 
     private void configureMap() {
         LatLngBounds madeiraBounds = new LatLngBounds(
-                new LatLng(32.50, -17.30), // SW bounds
-                new LatLng(33.10, -16.30)  // NE bounds
+                new LatLng(32.50, -17.30), // SW
+                new LatLng(33.10, -16.30)  // NE
         );
 
         mMap.setLatLngBoundsForCameraTarget(madeiraBounds);
@@ -156,99 +114,4 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         mMap.setMinZoomPreference(8.0f);
         mMap.setMaxZoomPreference(18.0f);
     }
-
-    // Método para calcular a distância até as rotas e escolher a mais próxima
-    private void calculateClosestRoute(LatLng userLocation) {
-        // Carregar as GeoJsonLayer das rotas
-        GeoJsonLayer vrLineLayer = GeoJsonUtils.loadGeoJsonLayer(this, R.raw.vr_line);
-        GeoJsonLayer oldStreetLineLayer = GeoJsonUtils.loadGeoJsonLayer(this, R.raw.old_street);
-
-        // Calcular a distância até as rotas
-        double vrDistance = calculateDistanceToGeoJson(userLocation, vrLineLayer);
-        double oldStreetDistance = calculateDistanceToGeoJson(userLocation, oldStreetLineLayer);
-
-        // Escolher a rota mais próxima
-        if (vrDistance < oldStreetDistance) {
-            // Rota Via Rápida é mais próxima
-            drawRoute(vrLineLayer);
-        } else {
-            // Rota Caminho Velho é mais próxima
-            drawRoute(oldStreetLineLayer);
-        }
-    }
-
-    // Método para calcular a distância até uma linha GeoJSON
-    private double calculateDistanceToGeoJson(LatLng userLocation, GeoJsonLayer layer) {
-        double minDistance = Double.MAX_VALUE;
-
-        // Para cada coordenada da GeoJsonLayer, calculamos a distância até o ponto do usuário
-        for (GeoJsonFeature feature : layer.getFeatures()) {
-            if (feature.getGeometry() instanceof GeoJsonLineString) {
-                GeoJsonLineString lineString = (GeoJsonLineString) feature.getGeometry(); // Obtém a geometria da feature
-                for (LatLng latLng : lineString.getCoordinates()) {
-                    double distance = SphericalUtil.computeDistanceBetween(userLocation, latLng);
-                    minDistance = Math.min(minDistance, distance);
-                }
-            }
-        }
-
-        return minDistance;
-    }
-
-    // Método para desenhar a rota escolhida no mapa
-    private void drawRoute(GeoJsonLayer selectedRouteLayer) {
-        mMap.clear();
-
-        selectedRouteLayer.addLayerToMap();
-
-        // Ajustar a câmera para a rota escolhida
-        LatLngBounds.Builder builder = new LatLngBounds.Builder();
-        for (GeoJsonFeature feature : selectedRouteLayer.getFeatures()) {
-            if (feature.getGeometry() instanceof GeoJsonLineString) {
-                GeoJsonLineString lineString = (GeoJsonLineString) feature.getGeometry();
-                for (LatLng latLng : lineString.getCoordinates()) {
-                    builder.include(latLng);
-                }
-            }
-        }
-        LatLngBounds bounds = builder.build();
-        mMap.moveCamera(CameraUpdateFactory.newLatLngBounds(bounds, 50));
-    }
-
-    public void uploadGeoJsonToFirestore(Context context, String id, String fileName, String routenumber, String routeName, String company, String hexadecimalColor) {
-        try {
-            InputStream inputStream = context.getResources().openRawResource(
-                    context.getResources().getIdentifier(fileName.replace(".geojson", ""), "raw", context.getPackageName()));
-            BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
-            StringBuilder jsonBuilder = new StringBuilder();
-            String line;
-            while ((line = reader.readLine()) != null) {
-                jsonBuilder.append(line);
-            }
-            reader.close();
-
-            String geoJsonData = jsonBuilder.toString();
-
-            FirebaseFirestore db = FirebaseFirestore.getInstance();
-
-            Map<String, Object> data = new HashMap<>();
-            data.put("id", id);
-            data.put("routenumber", routenumber);
-            data.put("routename", routeName);
-            data.put("company", company);
-            data.put("data", geoJsonData);
-            data.put("color", hexadecimalColor);
-
-
-            db.collection("geojsons")
-                    .document(fileName.replace(".geojson", ""))
-                    .set(data)
-                    .addOnSuccessListener(aVoid -> Log.d("GeoJSON", "GeoJSON enviado ao Firestore!"))
-                    .addOnFailureListener(e -> Log.e("GeoJSON", "Erro ao enviar: " + e.getMessage()));
-
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
 }
