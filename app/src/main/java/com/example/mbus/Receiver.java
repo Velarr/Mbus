@@ -8,69 +8,69 @@ import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.model.*;
 import com.google.firebase.database.*;
 
-import com.google.maps.android.data.kml.KmlLayer;
+import com.google.maps.android.data.geojson.GeoJsonLayer;
 
-import org.xmlpull.v1.XmlPullParserException;
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.io.InputStream;
 import java.util.*;
 
 public class Receiver {
 
-    private final GoogleMap mMap;
+    private final GoogleMap map;
     private final Context context;
-    private final DatabaseReference ref;
-    private final Map<String, String> userLineMap = new HashMap<>();
-    private KmlLayer currentLayer;
-    private final List<Marker> todosOsMarcadores = new ArrayList<>();
+    private final DatabaseReference firebaseRef;
+    private final Map<String, String> markerLineMap = new HashMap<>();
+    private final List<Marker> allMarkers = new ArrayList<>();
+    private GeoJsonLayer currentLayer;
 
-    public Receiver(GoogleMap mMap, Context context) {
-        this.mMap = mMap;
+    public Receiver(GoogleMap map, Context context) {
+        this.map = map;
         this.context = context;
-        this.ref = FirebaseDatabase.getInstance().getReference("locations");
+        this.firebaseRef = FirebaseDatabase.getInstance().getReference("locations");
     }
 
     public void startListening() {
-        ref.addValueEventListener(new ValueEventListener() {
+        firebaseRef.addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(DataSnapshot snapshot) {
-                mMap.clear();
-                todosOsMarcadores.clear();
-                userLineMap.clear();
+                map.clear();
+                allMarkers.clear();
+                markerLineMap.clear();
 
                 for (DataSnapshot child : snapshot.getChildren()) {
                     try {
-                        String name = child.getKey(); // 'name' será usado como título
+                        String name = child.getKey();
                         Double lat = child.child("latitude").getValue(Double.class);
                         Double lng = child.child("longitude").getValue(Double.class);
-                        String linha = child.child("linha").getValue(String.class);
+                        String line = child.child("linha").getValue(String.class);
 
                         if (lat != null && lng != null) {
                             LatLng position = new LatLng(lat, lng);
-                            Marker marker = mMap.addMarker(new MarkerOptions()
+                            Marker marker = map.addMarker(new MarkerOptions()
                                     .position(position)
                                     .title(name)
                                     .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED))
-                                    .snippet("Clique para ver o trajeto"));
+                                    .snippet("Click to view route"));
 
                             if (marker != null) {
-                                todosOsMarcadores.add(marker);
-                                if (linha != null) {
-                                    userLineMap.put(marker.getId(), linha);
+                                allMarkers.add(marker);
+                                if (line != null) {
+                                    markerLineMap.put(marker.getId(), line);
                                 }
                             }
                         }
                     } catch (Exception e) {
-                        Log.e("Receiver", "Erro ao ler dados: " + e.getMessage());
+                        Log.e("Receiver", "Error reading data: " + e.getMessage());
                     }
                 }
 
-                // Listener para clique em marcador
-                mMap.setOnMarkerClickListener(marker -> {
+                map.setOnMarkerClickListener(marker -> {
                     LatLng position = marker.getPosition();
                     List<Marker> overlappingMarkers = new ArrayList<>();
 
-                    for (Marker otherMarker : todosOsMarcadores) {
+                    for (Marker otherMarker : allMarkers) {
                         if (!otherMarker.equals(marker)) {
                             float[] results = new float[1];
                             Location.distanceBetween(
@@ -78,7 +78,7 @@ public class Receiver {
                                     otherMarker.getPosition().latitude, otherMarker.getPosition().longitude,
                                     results
                             );
-                            if (results[0] < 10) { // distância menor que 10 metros
+                            if (results[0] < 10) {
                                 overlappingMarkers.add(otherMarker);
                             }
                         }
@@ -86,7 +86,7 @@ public class Receiver {
 
                     if (!overlappingMarkers.isEmpty()) {
                         double angleStep = 360.0 / (overlappingMarkers.size() + 1);
-                        double radius = 0.0001; // ~11 metros
+                        double radius = 0.0001;
 
                         int i = 0;
                         for (Marker overlapping : overlappingMarkers) {
@@ -99,9 +99,9 @@ public class Receiver {
                         }
                     }
 
-                    String linha = userLineMap.get(marker.getId());
-                    if (linha != null) {
-                        mostrarKml(linha);
+                    String line = markerLineMap.get(marker.getId());
+                    if (line != null) {
+                        showGeoJson(line);
                     }
 
                     return false;
@@ -110,33 +110,38 @@ public class Receiver {
 
             @Override
             public void onCancelled(DatabaseError error) {
-                Log.e("Receiver", "Erro no Firebase: " + error.getMessage());
+                Log.e("Receiver", "Firebase error: " + error.getMessage());
             }
         });
     }
 
-    private void mostrarKml(String nomeArquivo) {
+    private void showGeoJson(String fileNameWithoutExtension) {
         try {
             if (currentLayer != null) {
                 currentLayer.removeLayerFromMap();
                 currentLayer = null;
             }
 
-            // Obtem o id do recurso (R.raw.nomedoarquivo, por exemplo)
             int rawResId = context.getResources().getIdentifier(
-                    nomeArquivo.replace(".kml", ""), "raw", context.getPackageName());
+                    fileNameWithoutExtension.replace(".geojson", ""), "raw", context.getPackageName());
 
             if (rawResId == 0) {
-                Log.e("Receiver", "Arquivo KML não encontrado: " + nomeArquivo);
+                Log.e("Receiver", "GeoJSON file not found: " + fileNameWithoutExtension);
                 return;
             }
 
             InputStream inputStream = context.getResources().openRawResource(rawResId);
-            currentLayer = new KmlLayer(mMap, inputStream, context);
+            JSONObject jsonObject = new JSONObject(convertStreamToString(inputStream));
+            currentLayer = new GeoJsonLayer(map, jsonObject);
             currentLayer.addLayerToMap();
 
-        } catch (XmlPullParserException | java.io.IOException e) {
-            Log.e("Receiver", "Erro ao mostrar KML: " + e.getMessage());
+        } catch (JSONException | java.io.IOException e) {
+            Log.e("Receiver", "Error showing GeoJSON: " + e.getMessage());
         }
+    }
+
+    private String convertStreamToString(InputStream inputStream) throws java.io.IOException {
+        Scanner scanner = new Scanner(inputStream).useDelimiter("\\A");
+        return scanner.hasNext() ? scanner.next() : "";
     }
 }

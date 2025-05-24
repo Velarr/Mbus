@@ -15,7 +15,6 @@ import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.LatLngBounds;
-import com.google.maps.android.data.kml.KmlLayer;
 
 import java.io.InputStream;
 
@@ -23,6 +22,9 @@ import androidx.core.app.ActivityCompat;
 import androidx.fragment.app.FragmentActivity;
 
 import com.example.mbus.databinding.ActivityMapsBinding;
+import com.google.maps.android.data.geojson.GeoJsonLayer;
+
+import org.json.JSONException;
 
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback {
 
@@ -45,7 +47,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
 
-        MapOptionsMenu menu = new MapOptionsMenu(this, btnOptions, kmlResId -> loadKmlLayer(kmlResId));
+        MapOptionsMenu menu = new MapOptionsMenu(this, btnOptions, geoJsonResId -> loadGeoJsonLayer(geoJsonResId));
 
         btnOptions.setOnClickListener(v -> menu.show());
     }
@@ -70,11 +72,10 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                     }
                 });
 
-        // Inicializa o receiver
         Receiver receiver = new Receiver(mMap, this);
         receiver.startListening();
 
-        configureMap();
+        configureMapBounds();
     }
 
     @Override
@@ -87,23 +88,25 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                     mMap.setMyLocationEnabled(true);
                 }
             }
+            Toast.makeText(this, "Location permission granted", Toast.LENGTH_SHORT).show();
         }
-        Toast.makeText(this, "Permissão de localização concedida", Toast.LENGTH_SHORT).show();
     }
 
-    private void loadKmlLayer(int kmlResId) {
+    private void loadGeoJsonLayer(int geoJsonResId) {
         mMap.clear();
-        configureMap();
+        configureMapBounds();
 
         try {
-            KmlLayer layer = new KmlLayer(mMap, kmlResId, getApplicationContext());
-            layer.addLayerToMap();
+            GeoJsonLayer geoJsonLayer = new GeoJsonLayer(mMap, geoJsonResId, getApplicationContext());
+            geoJsonLayer.addLayerToMap();
         } catch (Exception e) {
-            Log.e("KML", "Erro ao carregar arquivo KML: " + e.getMessage());
+            Log.e("GeoJSON", "Error loading GeoJSON file: " + e.getMessage());
         }
     }
 
-    private void configureMap() {
+
+
+    private void configureMapBounds() {
         LatLngBounds madeiraBounds = new LatLngBounds(
                 new LatLng(32.50, -17.30), // SW
                 new LatLng(33.10, -16.30)  // NE

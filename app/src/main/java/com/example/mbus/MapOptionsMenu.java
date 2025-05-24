@@ -8,7 +8,7 @@ import android.widget.PopupMenu;
 public class MapOptionsMenu {
 
     public interface OnOptionSelectedListener {
-        void onOptionSelected(int kmlResId);
+        void onOptionSelected(int geoJsonResId);
     }
 
     private final Context context;
@@ -29,8 +29,8 @@ public class MapOptionsMenu {
             @Override
             public boolean onMenuItemClick(MenuItem item) {
                 int itemId = item.getItemId();
-                if (itemId == R.id.option_vr_line) {
-                    listener.onOptionSelected(R.raw.vr_line);
+                if (itemId == R.id.covao_vr) {
+                    listener.onOptionSelected(R.raw.covao_vr);
                     return true;
                 } else if (itemId == R.id.option_old_street_line) {
                     listener.onOptionSelected(R.raw.old_street);

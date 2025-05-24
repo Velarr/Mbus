@@ -60,4 +60,6 @@ dependencies {
 
     implementation ("com.google.maps.android:android-maps-utils:2.2.3")
 
+    implementation ("com.google.maps.android:android-maps-utils:2.3.0")
+
 }
