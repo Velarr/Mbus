@@ -30,6 +30,11 @@ import com.google.firebase.firestore.FirebaseFirestore;
 
 import org.json.JSONObject;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 public class MapsActivity extends AppCompatActivity implements OnMapReadyCallback {
 
     private GoogleMap map;
@@ -84,24 +89,43 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                     currentLayer = null;
                 }
 
+                // Agrupa marcadores pela mesma lat,lng
+                Map<String, List<DataSnapshot>> groupedByLatLng = new HashMap<>();
+
                 for (DataSnapshot child : snapshot.getChildren()) {
-                    String id = child.child("id").getValue(String.class);
-                    String rota = child.child("rota").getValue(String.class);
-                    Long nrotaLong = child.child("nrota").getValue(Long.class);
                     Double lat = child.child("latitude").getValue(Double.class);
                     Double lng = child.child("longitude").getValue(Double.class);
+                    if (lat != null && lng != null) {
+                        String key = lat + "," + lng;
+                        if (!groupedByLatLng.containsKey(key)) {
+                            groupedByLatLng.put(key, new ArrayList<>());
+                        }
+                        groupedByLatLng.get(key).add(child);
+                    }
+                }
 
-                    if (lat != null && lng != null && id != null) {
-                        LatLng position = new LatLng(lat, lng);
+                // Para cada grupo de marcadores na mesma posição, adiciona com offset
+                for (List<DataSnapshot> group : groupedByLatLng.values()) {
+                    int index = 0;
+                    for (DataSnapshot child : group) {
+                        String id = child.child("id").getValue(String.class);
+                        Double lat = child.child("latitude").getValue(Double.class);
+                        Double lng = child.child("longitude").getValue(Double.class);
 
-                        MarkerOptions markerOptions = new MarkerOptions()
-                                .position(position)
-                                .title(rota != null ? rota : "Rota")
-                                .snippet("Nº: " + (nrotaLong != null ? nrotaLong : "-"))
-                                .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED));
+                        if (lat != null && lng != null && id != null) {
+                            LatLng originalPos = new LatLng(lat, lng);
+                            LatLng posComOffset = offsetLatLng(originalPos, index);
 
-                        Marker marker = map.addMarker(markerOptions);
-                        marker.setTag(id);
+                            MarkerOptions markerOptions = new MarkerOptions()
+                                    .position(posComOffset)
+                                    .title("Carregando...")
+                                    .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED));
+
+                            Marker marker = map.addMarker(markerOptions);
+                            marker.setTag(id);
+
+                            index++;
+                        }
                     }
                 }
             }
@@ -112,6 +136,21 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                 Toast.makeText(MapsActivity.this, "Erro ao carregar localizações.", Toast.LENGTH_SHORT).show();
             }
         });
+    }
+
+    private LatLng offsetLatLng(LatLng original, int index) {
+        if (index == 0) {
+            return original;
+        }
+
+        double offset = 0.000010;
+
+        double angle = index * 45;
+        double radians = Math.toRadians(angle);
+        double latOffset = offset * Math.cos(radians);
+        double lngOffset = offset * Math.sin(radians);
+
+        return new LatLng(original.latitude + latOffset, original.longitude + lngOffset);
     }
 
     private void loadGeoJsonFromFirestore(String rotaId) {
@@ -164,10 +203,16 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
 
                         // Atualiza info window do marcador selecionado com dados do Firestore
                         if (selectedMarker != null) {
-                            if (rotaNome != null) selectedMarker.setTitle(rotaNome);
-                            if (nrota != null) selectedMarker.setSnippet("Nº: " + nrota);
-                            selectedMarker.showInfoWindow();  // atualiza info window
+                            if (rotaNome != null && nrota != null) {
+                                selectedMarker.setTitle(nrota + " - " + rotaNome);
+                            } else if (rotaNome != null) {
+                                selectedMarker.setTitle(rotaNome);
+                            } else if (nrota != null) {
+                                selectedMarker.setTitle(String.valueOf(nrota));
+                            }
+                            selectedMarker.showInfoWindow();
                         }
+
 
                     } catch (Exception e) {
                         Log.e("MapsActivity", "Erro ao carregar GeoJSON: ", e);
