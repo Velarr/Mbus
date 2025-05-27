@@ -20,14 +20,6 @@ import com.google.maps.android.data.geojson.GeoJsonFeature;
 import com.google.maps.android.data.geojson.GeoJsonLayer;
 import com.google.maps.android.data.geojson.GeoJsonLineStringStyle;
 
-import com.google.firebase.database.DataSnapshot;
-import com.google.firebase.database.DatabaseError;
-import com.google.firebase.database.DatabaseReference;
-import com.google.firebase.database.FirebaseDatabase;
-
-import com.google.firebase.database.ValueEventListener;
-import com.google.firebase.firestore.FirebaseFirestore;
-
 import org.json.JSONObject;
 
 import java.util.ArrayList;
@@ -38,32 +30,40 @@ import java.util.Map;
 public class MapsActivity extends AppCompatActivity implements OnMapReadyCallback {
 
     private GoogleMap map;
-    private DatabaseReference locationsRef;
-    private FirebaseFirestore firestore;
+    private LocationsRepository locationsRepository;
+    private RoutesRepository routesRepository;
+
     private GeoJsonLayer currentLayer;
-    private Marker selectedMarker;  // marcador clicado atualmente
+    private Marker selectedMarker;
+
+    private static final String TAG = "MapsActivity";
+    private static final LatLng DEFAULT_LOCATION = new LatLng(32.65, -16.97);
+    private static final float DEFAULT_ZOOM = 13f;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_maps);
 
-        firestore = FirebaseFirestore.getInstance();
-        locationsRef = FirebaseDatabase.getInstance().getReference("locations");
+        locationsRepository = new LocationsRepository();
+        routesRepository = new RoutesRepository();
 
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
-        mapFragment.getMapAsync(this);
+        if (mapFragment != null) {
+            mapFragment.getMapAsync(this);
+        } else {
+            Toast.makeText(this, "Erro ao carregar o mapa.", Toast.LENGTH_SHORT).show();
+        }
     }
 
     @Override
     public void onMapReady(@NonNull GoogleMap googleMap) {
         map = googleMap;
 
-        LatLng defaultLatLng = new LatLng(32.65, -16.97);
-        map.moveCamera(CameraUpdateFactory.newLatLngZoom(defaultLatLng, 13f));
+        map.moveCamera(CameraUpdateFactory.newLatLngZoom(DEFAULT_LOCATION, DEFAULT_ZOOM));
 
-        listenLocationsRealtime();
+        startListeningLocations();
 
         map.setOnMarkerClickListener(marker -> {
             String rotaId = (String) marker.getTag();
@@ -72,136 +72,105 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                 return false;
             }
 
-            selectedMarker = marker;  // guarda marcador clicado
-            loadGeoJsonFromFirestore(rotaId);
-            return false; // permite mostrar info window normalmente
+            selectedMarker = marker;
+            loadGeoJsonFromRouteId(rotaId);
+            return false;
         });
     }
 
-    private void listenLocationsRealtime() {
-        locationsRef.addValueEventListener(new ValueEventListener() {
+    private void startListeningLocations() {
+        locationsRepository.startListening(new LocationsRepository.LocationsListener() {
             @Override
-            public void onDataChange(@NonNull DataSnapshot snapshot) {
-                map.clear();
+            public void onLocationsUpdate(Map<String, Map<String, Object>> locations) {
+                runOnUiThread(() -> {
+                    map.clear();
 
-                if (currentLayer != null) {
-                    currentLayer.removeLayerFromMap();
-                    currentLayer = null;
-                }
+                    if (currentLayer != null) {
+                        currentLayer.removeLayerFromMap();
+                        currentLayer = null;
+                    }
 
-                // Agrupa marcadores pela mesma lat,lng
-                Map<String, List<DataSnapshot>> groupedByLatLng = new HashMap<>();
+                    // Agrupa marcadores pela mesma posição (lat,lng)
+                    Map<String, List<Map<String, Object>>> grouped = new HashMap<>();
 
-                for (DataSnapshot child : snapshot.getChildren()) {
-                    Double lat = child.child("latitude").getValue(Double.class);
-                    Double lng = child.child("longitude").getValue(Double.class);
-                    if (lat != null && lng != null) {
+                    for (Map.Entry<String, Map<String, Object>> entry : locations.entrySet()) {
+                        Map<String, Object> locData = entry.getValue();
+                        Double lat = getDouble(locData.get("latitude"));
+                        Double lng = getDouble(locData.get("longitude"));
+                        if (lat == null || lng == null) continue;
+
                         String key = lat + "," + lng;
-                        if (!groupedByLatLng.containsKey(key)) {
-                            groupedByLatLng.put(key, new ArrayList<>());
-                        }
-                        groupedByLatLng.get(key).add(child);
+                        grouped.computeIfAbsent(key, k -> new ArrayList<>()).add(locData);
                     }
-                }
 
-                // Para cada grupo de marcadores na mesma posição, adiciona com offset
-                for (List<DataSnapshot> group : groupedByLatLng.values()) {
-                    int index = 0;
-                    for (DataSnapshot child : group) {
-                        String id = child.child("id").getValue(String.class);
-                        Double lat = child.child("latitude").getValue(Double.class);
-                        Double lng = child.child("longitude").getValue(Double.class);
+                    // Para cada grupo, adiciona marcadores com offset para evitar sobreposição
+                    for (List<Map<String, Object>> group : grouped.values()) {
+                        int index = 0;
+                        for (Map<String, Object> locData : group) {
+                            Double lat = getDouble(locData.get("latitude"));
+                            Double lng = getDouble(locData.get("longitude"));
+                            String id = (String) locData.get("id");
 
-                        if (lat != null && lng != null && id != null) {
-                            LatLng originalPos = new LatLng(lat, lng);
-                            LatLng posComOffset = offsetLatLng(originalPos, index);
+                            if (lat != null && lng != null && id != null) {
+                                LatLng originalPos = new LatLng(lat, lng);
+                                LatLng offsetPos = MapUtils.offsetLatLng(originalPos, index);
 
-                            MarkerOptions markerOptions = new MarkerOptions()
-                                    .position(posComOffset)
-                                    .title("Carregando...")
-                                    .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED));
+                                MarkerOptions markerOptions = new MarkerOptions()
+                                        .position(offsetPos)
+                                        .title("Carregando...")
+                                        .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED));
 
-                            Marker marker = map.addMarker(markerOptions);
-                            marker.setTag(id);
+                                Marker marker = map.addMarker(markerOptions);
+                                if (marker != null) marker.setTag(id);
 
-                            index++;
+                                index++;
+                            }
                         }
                     }
-                }
+                });
             }
 
             @Override
-            public void onCancelled(@NonNull DatabaseError error) {
-                Log.e("MapsActivity", "Erro Realtime DB: " + error.getMessage());
-                Toast.makeText(MapsActivity.this, "Erro ao carregar localizações.", Toast.LENGTH_SHORT).show();
+            public void onError(String message) {
+                Log.e(TAG, "Erro ao receber localizações: " + message);
+                runOnUiThread(() -> Toast.makeText(MapsActivity.this, "Erro ao carregar localizações.", Toast.LENGTH_SHORT).show());
             }
         });
     }
 
-    private LatLng offsetLatLng(LatLng original, int index) {
-        if (index == 0) {
-            return original;
-        }
-
-        double offset = 0.000010;
-
-        double angle = index * 45;
-        double radians = Math.toRadians(angle);
-        double latOffset = offset * Math.cos(radians);
-        double lngOffset = offset * Math.sin(radians);
-
-        return new LatLng(original.latitude + latOffset, original.longitude + lngOffset);
-    }
-
-    private void loadGeoJsonFromFirestore(String rotaId) {
+    private void loadGeoJsonFromRouteId(String routeId) {
         if (currentLayer != null) {
             currentLayer.removeLayerFromMap();
             currentLayer = null;
         }
 
-        firestore.collection("rotas").document(rotaId).get()
-                .addOnSuccessListener(documentSnapshot -> {
-                    if (!documentSnapshot.exists()) {
-                        Toast.makeText(this, "Rota não encontrada no Firestore", Toast.LENGTH_SHORT).show();
-                        return;
-                    }
-
-                    String geoJsonString = documentSnapshot.getString("geojson");
-                    String corHex = documentSnapshot.getString("cor");
-                    String rotaNome = documentSnapshot.getString("rota");
-                    Long nrota = documentSnapshot.getLong("nrota");
-
-                    if (geoJsonString == null) {
-                        Toast.makeText(this, "GeoJSON não disponível", Toast.LENGTH_SHORT).show();
-                        return;
-                    }
-
+        routesRepository.loadRouteById(routeId, new RoutesRepository.RouteCallback() {
+            @Override
+            public void onRouteLoaded(String geoJson, String corHex, String rotaNome, Long nrota) {
+                runOnUiThread(() -> {
                     try {
-                        JSONObject geoJsonObject = new JSONObject(geoJsonString);
+                        JSONObject geoJsonObject = new JSONObject(geoJson);
                         currentLayer = new GeoJsonLayer(map, geoJsonObject);
 
-                        // Verifica e ajusta a cor da linha (aceita #RRGGBB ou #AARRGGBB)
-                        String corValida = "#FF0000"; // vermelho padrão
-                        if (corHex != null && corHex.trim().startsWith("#") && (corHex.trim().length() == 7 || corHex.trim().length() == 9)) {
+                        String corValida = "#FF0000"; // padrão vermelho
+                        if (corHex != null && corHex.trim().matches("#[A-Fa-f0-9]{6}([A-Fa-f0-9]{2})?")) {
                             corValida = corHex.trim();
                         }
-                        Log.d("MapsActivity", "Cor da linha do GeoJSON: " + corValida);
 
                         for (GeoJsonFeature feature : currentLayer.getFeatures()) {
                             if (feature.getGeometry() instanceof com.google.maps.android.data.geojson.GeoJsonLineString) {
-                                GeoJsonLineStringStyle lineStringStyle = feature.getLineStringStyle();
-                                if (lineStringStyle == null) {
-                                    lineStringStyle = new GeoJsonLineStringStyle();
-                                    feature.setLineStringStyle(lineStringStyle);
+                                GeoJsonLineStringStyle style = feature.getLineStringStyle();
+                                if (style == null) {
+                                    style = new GeoJsonLineStringStyle();
+                                    feature.setLineStringStyle(style);
                                 }
-                                lineStringStyle.setColor(Color.parseColor(corValida));
-                                lineStringStyle.setWidth(8);
+                                style.setColor(Color.parseColor(corValida));
+                                style.setWidth(8);
                             }
                         }
 
                         currentLayer.addLayerToMap();
 
-                        // Atualiza info window do marcador selecionado com dados do Firestore
                         if (selectedMarker != null) {
                             if (rotaNome != null && nrota != null) {
                                 selectedMarker.setTitle(nrota + " - " + rotaNome);
@@ -213,15 +182,31 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                             selectedMarker.showInfoWindow();
                         }
 
-
                     } catch (Exception e) {
-                        Log.e("MapsActivity", "Erro ao carregar GeoJSON: ", e);
-                        Toast.makeText(this, "Erro ao carregar rota: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                        Log.e(TAG, "Erro ao carregar GeoJSON", e);
+                        Toast.makeText(MapsActivity.this, "Erro ao carregar rota: " + e.getMessage(), Toast.LENGTH_LONG).show();
                     }
-                })
-                .addOnFailureListener(e -> {
-                    Log.e("MapsActivity", "Erro Firestore: ", e);
-                    Toast.makeText(this, "Falha ao buscar rota no Firestore.", Toast.LENGTH_SHORT).show();
                 });
+            }
+
+            @Override
+            public void onFailure(String message) {
+                runOnUiThread(() -> Toast.makeText(MapsActivity.this, message, Toast.LENGTH_SHORT).show());
+            }
+        });
+    }
+
+    // Método utilitário para converter objeto do Map em Double
+    private Double getDouble(Object obj) {
+        if (obj instanceof Double) return (Double) obj;
+        if (obj instanceof Float) return ((Float) obj).doubleValue();
+        if (obj instanceof Number) return ((Number) obj).doubleValue();
+        if (obj instanceof String) {
+            try {
+                return Double.parseDouble((String) obj);
+            } catch (NumberFormatException ignored) {
+            }
+        }
+        return null;
     }
 }
