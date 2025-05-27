@@ -18,6 +18,7 @@ import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.maps.android.data.geojson.GeoJsonFeature;
 import com.google.maps.android.data.geojson.GeoJsonLayer;
+import com.google.maps.android.data.geojson.GeoJsonLineStringStyle;
 
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
@@ -25,7 +26,6 @@ import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 
 import com.google.firebase.database.ValueEventListener;
-import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 
 import org.json.JSONObject;
@@ -36,19 +36,16 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     private DatabaseReference locationsRef;
     private FirebaseFirestore firestore;
     private GeoJsonLayer currentLayer;
+    private Marker selectedMarker;  // marcador clicado atualmente
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_maps);
 
-        // Inicializa Firestore
         firestore = FirebaseFirestore.getInstance();
-
-        // Inicializa Realtime Database referência
         locationsRef = FirebaseDatabase.getInstance().getReference("locations");
 
-        // Obtém o SupportMapFragment e solicita callback
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
@@ -58,14 +55,11 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     public void onMapReady(@NonNull GoogleMap googleMap) {
         map = googleMap;
 
-        // Centraliza o mapa num ponto default (opcional)
         LatLng defaultLatLng = new LatLng(32.65, -16.97);
         map.moveCamera(CameraUpdateFactory.newLatLngZoom(defaultLatLng, 13f));
 
-        // Escuta Realtime Database para receber localizações
         listenLocationsRealtime();
 
-        // Configura clique em marcador para carregar GeoJSON do Firestore
         map.setOnMarkerClickListener(marker -> {
             String rotaId = (String) marker.getTag();
             if (rotaId == null) {
@@ -73,8 +67,9 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                 return false;
             }
 
+            selectedMarker = marker;  // guarda marcador clicado
             loadGeoJsonFromFirestore(rotaId);
-            return false; // Mostrar info window também
+            return false; // permite mostrar info window normalmente
         });
     }
 
@@ -83,6 +78,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
             @Override
             public void onDataChange(@NonNull DataSnapshot snapshot) {
                 map.clear();
+
                 if (currentLayer != null) {
                     currentLayer.removeLayerFromMap();
                     currentLayer = null;
@@ -92,7 +88,6 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                     String id = child.child("id").getValue(String.class);
                     String rota = child.child("rota").getValue(String.class);
                     Long nrotaLong = child.child("nrota").getValue(Long.class);
-                    String cor = child.child("cor").getValue(String.class);
                     Double lat = child.child("latitude").getValue(Double.class);
                     Double lng = child.child("longitude").getValue(Double.class);
 
@@ -102,12 +97,10 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                         MarkerOptions markerOptions = new MarkerOptions()
                                 .position(position)
                                 .title(rota != null ? rota : "Rota")
-                                .snippet("Nº: " + (nrotaLong != null ? nrotaLong : "-") + " | Toque para ver rota")
+                                .snippet("Nº: " + (nrotaLong != null ? nrotaLong : "-"))
                                 .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED));
 
                         Marker marker = map.addMarker(markerOptions);
-
-                        // Armazena o ID da rota Firestore no marcador para buscar depois
                         marker.setTag(id);
                     }
                 }
@@ -136,6 +129,8 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
 
                     String geoJsonString = documentSnapshot.getString("geojson");
                     String corHex = documentSnapshot.getString("cor");
+                    String rotaNome = documentSnapshot.getString("rota");
+                    Long nrota = documentSnapshot.getLong("nrota");
 
                     if (geoJsonString == null) {
                         Toast.makeText(this, "GeoJSON não disponível", Toast.LENGTH_SHORT).show();
@@ -146,22 +141,33 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                         JSONObject geoJsonObject = new JSONObject(geoJsonString);
                         currentLayer = new GeoJsonLayer(map, geoJsonObject);
 
-                        // Aplica cor nas linhas
+                        // Verifica e ajusta a cor da linha (aceita #RRGGBB ou #AARRGGBB)
+                        String corValida = "#FF0000"; // vermelho padrão
+                        if (corHex != null && corHex.trim().startsWith("#") && (corHex.trim().length() == 7 || corHex.trim().length() == 9)) {
+                            corValida = corHex.trim();
+                        }
+                        Log.d("MapsActivity", "Cor da linha do GeoJSON: " + corValida);
+
                         for (GeoJsonFeature feature : currentLayer.getFeatures()) {
                             if (feature.getGeometry() instanceof com.google.maps.android.data.geojson.GeoJsonLineString) {
-                                if (feature.getLineStringStyle() != null) {
-                                    feature.getLineStringStyle().setColor(Color.parseColor(corHex != null ? corHex : "#FF0000"));
-                                    feature.getLineStringStyle().setWidth(8);
-                                } else {
-                                    Log.w("GeoJson", "LineStringStyle is null for this feature.");
+                                GeoJsonLineStringStyle lineStringStyle = feature.getLineStringStyle();
+                                if (lineStringStyle == null) {
+                                    lineStringStyle = new GeoJsonLineStringStyle();
+                                    feature.setLineStringStyle(lineStringStyle);
                                 }
-                            } else {
-                                Log.w("GeoJson", "Feature is not a LineString: " + feature.getGeometry().getClass().getSimpleName());
+                                lineStringStyle.setColor(Color.parseColor(corValida));
+                                lineStringStyle.setWidth(8);
                             }
                         }
 
-
                         currentLayer.addLayerToMap();
+
+                        // Atualiza info window do marcador selecionado com dados do Firestore
+                        if (selectedMarker != null) {
+                            if (rotaNome != null) selectedMarker.setTitle(rotaNome);
+                            if (nrota != null) selectedMarker.setSnippet("Nº: " + nrota + " | Toque para ver rota");
+                            selectedMarker.showInfoWindow();  // atualiza info window
+                        }
 
                     } catch (Exception e) {
                         Log.e("MapsActivity", "Erro ao carregar GeoJSON: ", e);
