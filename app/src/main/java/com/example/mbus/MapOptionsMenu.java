@@ -21,25 +21,17 @@ public class MapOptionsMenu {
         this.listener = listener;
     }
 
-    public void show() {
+    /*public void show() {
         PopupMenu popupMenu = new PopupMenu(context, anchorView);
         popupMenu.getMenuInflater().inflate(R.menu.map_options_menu, popupMenu.getMenu());
 
         popupMenu.setOnMenuItemClickListener(new PopupMenu.OnMenuItemClickListener() {
             @Override
             public boolean onMenuItemClick(MenuItem item) {
-                int itemId = item.getItemId();
-                if (itemId == R.id.covao_vr) {
-                    listener.onOptionSelected(R.raw.covao_vr);
-                    return true;
-                } else if (itemId == R.id.option_old_street_line) {
-                    listener.onOptionSelected(R.raw.old_street);
-                    return true;
-                }
-                return false;
+
             }
         });
 
         popupMenu.show();
-    }
+    }*/
 }

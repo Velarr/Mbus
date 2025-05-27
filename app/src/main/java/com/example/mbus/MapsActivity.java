@@ -165,7 +165,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                         // Atualiza info window do marcador selecionado com dados do Firestore
                         if (selectedMarker != null) {
                             if (rotaNome != null) selectedMarker.setTitle(rotaNome);
-                            if (nrota != null) selectedMarker.setSnippet("Nº: " + nrota + " | Toque para ver rota");
+                            if (nrota != null) selectedMarker.setSnippet("Nº: " + nrota);
                             selectedMarker.showInfoWindow();  // atualiza info window
                         }
 
