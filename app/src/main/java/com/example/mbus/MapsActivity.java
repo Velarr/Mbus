@@ -1,120 +1,176 @@
 package com.example.mbus;
 
-import android.Manifest;
-import android.content.pm.PackageManager;
+import android.graphics.Color;
 import android.os.Bundle;
 import android.util.Log;
-import android.widget.LinearLayout;
 import android.widget.Toast;
 
-import com.google.android.gms.location.FusedLocationProviderClient;
-import com.google.android.gms.location.LocationServices;
+import androidx.annotation.NonNull;
+import androidx.appcompat.app.AppCompatActivity;
+
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
+import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
-import com.google.android.gms.maps.model.LatLngBounds;
-
-import java.io.InputStream;
-
-import androidx.core.app.ActivityCompat;
-import androidx.fragment.app.FragmentActivity;
-
-import com.example.mbus.databinding.ActivityMapsBinding;
+import com.google.android.gms.maps.model.Marker;
+import com.google.android.gms.maps.model.MarkerOptions;
+import com.google.maps.android.data.geojson.GeoJsonFeature;
 import com.google.maps.android.data.geojson.GeoJsonLayer;
 
-import org.json.JSONException;
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
 
-public class MapsActivity extends FragmentActivity implements OnMapReadyCallback {
+import com.google.firebase.database.ValueEventListener;
+import com.google.firebase.firestore.DocumentSnapshot;
+import com.google.firebase.firestore.FirebaseFirestore;
 
-    private GoogleMap mMap;
-    private ActivityMapsBinding binding;
-    private FusedLocationProviderClient fusedLocationClient;
-    private static final int LOCATION_PERMISSION_REQUEST_CODE = 1;
+import org.json.JSONObject;
+
+public class MapsActivity extends AppCompatActivity implements OnMapReadyCallback {
+
+    private GoogleMap map;
+    private DatabaseReference locationsRef;
+    private FirebaseFirestore firestore;
+    private GeoJsonLayer currentLayer;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        binding = ActivityMapsBinding.inflate(getLayoutInflater());
-        setContentView(binding.getRoot());
+        setContentView(R.layout.activity_maps);
 
+        // Inicializa Firestore
+        firestore = FirebaseFirestore.getInstance();
+
+        // Inicializa Realtime Database referência
+        locationsRef = FirebaseDatabase.getInstance().getReference("locations");
+
+        // Obtém o SupportMapFragment e solicita callback
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
-
-        LinearLayout btnOptions = findViewById(R.id.btn_bus);
-
-        fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
-
-        MapOptionsMenu menu = new MapOptionsMenu(this, btnOptions, geoJsonResId -> loadGeoJsonLayer(geoJsonResId));
-
-        btnOptions.setOnClickListener(v -> menu.show());
     }
 
     @Override
-    public void onMapReady(GoogleMap googleMap) {
-        mMap = googleMap;
+    public void onMapReady(@NonNull GoogleMap googleMap) {
+        map = googleMap;
 
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
-                && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, LOCATION_PERMISSION_REQUEST_CODE);
-            return;
-        }
+        // Centraliza o mapa num ponto default (opcional)
+        LatLng defaultLatLng = new LatLng(32.65, -16.97);
+        map.moveCamera(CameraUpdateFactory.newLatLngZoom(defaultLatLng, 13f));
 
-        mMap.setMyLocationEnabled(true);
+        // Escuta Realtime Database para receber localizações
+        listenLocationsRealtime();
 
-        fusedLocationClient.getLastLocation()
-                .addOnSuccessListener(this, location -> {
-                    if (location != null) {
-                        LatLng userLocation = new LatLng(location.getLatitude(), location.getLongitude());
-                        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(userLocation, 15));
+        // Configura clique em marcador para carregar GeoJSON do Firestore
+        map.setOnMarkerClickListener(marker -> {
+            String rotaId = (String) marker.getTag();
+            if (rotaId == null) {
+                Toast.makeText(this, "ID da rota não encontrado", Toast.LENGTH_SHORT).show();
+                return false;
+            }
+
+            loadGeoJsonFromFirestore(rotaId);
+            return false; // Mostrar info window também
+        });
+    }
+
+    private void listenLocationsRealtime() {
+        locationsRef.addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                map.clear();
+                if (currentLayer != null) {
+                    currentLayer.removeLayerFromMap();
+                    currentLayer = null;
+                }
+
+                for (DataSnapshot child : snapshot.getChildren()) {
+                    String id = child.child("id").getValue(String.class);
+                    String rota = child.child("rota").getValue(String.class);
+                    Long nrotaLong = child.child("nrota").getValue(Long.class);
+                    String cor = child.child("cor").getValue(String.class);
+                    Double lat = child.child("latitude").getValue(Double.class);
+                    Double lng = child.child("longitude").getValue(Double.class);
+
+                    if (lat != null && lng != null && id != null) {
+                        LatLng position = new LatLng(lat, lng);
+
+                        MarkerOptions markerOptions = new MarkerOptions()
+                                .position(position)
+                                .title(rota != null ? rota : "Rota")
+                                .snippet("Nº: " + (nrotaLong != null ? nrotaLong : "-") + " | Toque para ver rota")
+                                .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED));
+
+                        Marker marker = map.addMarker(markerOptions);
+
+                        // Armazena o ID da rota Firestore no marcador para buscar depois
+                        marker.setTag(id);
                     }
-                });
-
-        Receiver receiver = new Receiver(mMap, this);
-        receiver.startListening();
-
-        configureMapBounds();
-    }
-
-    @Override
-    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-
-        if (requestCode == LOCATION_PERMISSION_REQUEST_CODE) {
-            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
-                    mMap.setMyLocationEnabled(true);
                 }
             }
-            Toast.makeText(this, "Location permission granted", Toast.LENGTH_SHORT).show();
-        }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {
+                Log.e("MapsActivity", "Erro Realtime DB: " + error.getMessage());
+                Toast.makeText(MapsActivity.this, "Erro ao carregar localizações.", Toast.LENGTH_SHORT).show();
+            }
+        });
     }
 
-    private void loadGeoJsonLayer(int geoJsonResId) {
-        mMap.clear();
-        configureMapBounds();
-
-        try {
-            GeoJsonLayer geoJsonLayer = new GeoJsonLayer(mMap, geoJsonResId, getApplicationContext());
-            geoJsonLayer.addLayerToMap();
-        } catch (Exception e) {
-            Log.e("GeoJSON", "Error loading GeoJSON file: " + e.getMessage());
+    private void loadGeoJsonFromFirestore(String rotaId) {
+        if (currentLayer != null) {
+            currentLayer.removeLayerFromMap();
+            currentLayer = null;
         }
-    }
+
+        firestore.collection("rotas").document(rotaId).get()
+                .addOnSuccessListener(documentSnapshot -> {
+                    if (!documentSnapshot.exists()) {
+                        Toast.makeText(this, "Rota não encontrada no Firestore", Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+
+                    String geoJsonString = documentSnapshot.getString("geojson");
+                    String corHex = documentSnapshot.getString("cor");
+
+                    if (geoJsonString == null) {
+                        Toast.makeText(this, "GeoJSON não disponível", Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+
+                    try {
+                        JSONObject geoJsonObject = new JSONObject(geoJsonString);
+                        currentLayer = new GeoJsonLayer(map, geoJsonObject);
+
+                        // Aplica cor nas linhas
+                        for (GeoJsonFeature feature : currentLayer.getFeatures()) {
+                            if (feature.getGeometry() instanceof com.google.maps.android.data.geojson.GeoJsonLineString) {
+                                if (feature.getLineStringStyle() != null) {
+                                    feature.getLineStringStyle().setColor(Color.parseColor(corHex != null ? corHex : "#FF0000"));
+                                    feature.getLineStringStyle().setWidth(8);
+                                } else {
+                                    Log.w("GeoJson", "LineStringStyle is null for this feature.");
+                                }
+                            } else {
+                                Log.w("GeoJson", "Feature is not a LineString: " + feature.getGeometry().getClass().getSimpleName());
+                            }
+                        }
 
 
+                        currentLayer.addLayerToMap();
 
-    private void configureMapBounds() {
-        LatLngBounds madeiraBounds = new LatLngBounds(
-                new LatLng(32.50, -17.30), // SW
-                new LatLng(33.10, -16.30)  // NE
-        );
-
-        mMap.setLatLngBoundsForCameraTarget(madeiraBounds);
-        mMap.moveCamera(CameraUpdateFactory.newLatLngBounds(madeiraBounds, 0));
-        mMap.setMinZoomPreference(8.0f);
-        mMap.setMaxZoomPreference(18.0f);
+                    } catch (Exception e) {
+                        Log.e("MapsActivity", "Erro ao carregar GeoJSON: ", e);
+                        Toast.makeText(this, "Erro ao carregar rota: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    Log.e("MapsActivity", "Erro Firestore: ", e);
+                    Toast.makeText(this, "Falha ao buscar rota no Firestore.", Toast.LENGTH_SHORT).show();
+                });
     }
 }
