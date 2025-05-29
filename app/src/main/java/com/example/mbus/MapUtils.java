@@ -10,7 +10,7 @@ public class MapUtils {
     public static LatLng offsetLatLng(LatLng original, int index) {
         if (index == 0) return original;
 
-        double offset = 0.000010;
+        double offset = 0.000020;
         double angle = index * 45;
         double radians = Math.toRadians(angle);
 
