@@ -283,7 +283,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                 }
             }
 
-            // 5) Adiciona a camada ao mapa
+
             currentLayer.addLayerToMap();
             Log.d(TAG, "drawRouteForMarker: rota desenhada para ID = " + routeId);
 
@@ -294,9 +294,6 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         }
     }
 
-    /**
-     * Converte um objeto (Double, Float, Number ou String) em Double.
-     */
     private Double getDouble(Object obj) {
         if (obj instanceof Double) return (Double) obj;
         if (obj instanceof Float) return ((Float) obj).doubleValue();
@@ -309,14 +306,11 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         return null;
     }
 
-    // ------------------------------------------------------------------------
-    // Classe auxiliar para armazenar dados de rota em memória
-    // ------------------------------------------------------------------------
     private static class RouteData {
-        final String geojson;  // corresponde ao campo “geojson” no Firestore
-        final String corHex;   // corresponde ao campo “cor”
-        final String rotaNome; // corresponde ao campo “rota”
-        final Long   nrota;    // corresponde ao campo “nrota”
+        final String geojson;
+        final String corHex;
+        final String rotaNome;
+        final Long   nrota;
 
         RouteData(String geojson, String corHex, String rotaNome, Long nrota) {
             this.geojson = geojson;
