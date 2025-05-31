@@ -30,27 +30,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-/**
- * MapsActivity (ajustada)
- *
- * 1) Não removemos mais currentLayer em onLocationsUpdate, para que a rota
- *    exibida permaneça até o usuário clicar em outro marcador.
- * 2) setOnMarkerClickListener é configurado apenas em onMapReady, não a cada atualização de posição.
- * 3) Detalhes de campo do Firestore:
- *    - A coleção se chama "rotas" (caso use outro nome, substitua aqui).
- *    - Cada documento de rota deve ter campos:
- *         companhia   (não usado aqui)
- *         cor         (String, ex. "#BA8E23")
- *         geojson     (String, ex. JSON válido)
- *         nrota       (Long, ex. 8)
- *         rota        (String, ex. "Sta Quintéria")
- *      E o ID do documento deve ser exatamente igual ao campo `id` gravado no Realtime Database.
- */
 public class MapsActivity extends AppCompatActivity implements OnMapReadyCallback {
 
     private static final String TAG = "MapsActivity";
 
-    // Posição e zoom iniciais
     private static final LatLng DEFAULT_LOCATION = new LatLng(32.65, -16.97);
     private static final float DEFAULT_ZOOM = 13f;
 
@@ -58,13 +41,9 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     private LocationsRepository locationsRepository;
     private FirebaseFirestore firestore;
 
-    /** Mapa em memória de routeId → RouteData (pré-carregado). */
     private final Map<String, RouteData> routeDataMap = new HashMap<>();
-
-    /** Camada GeoJSON que representa a rota atualmente desenhada. */
     private GeoJsonLayer currentLayer;
 
-    /** Lista de todos os marcadores de localização ativos, para removê-los manualmente. */
     private final List<Marker> locationMarkers = new ArrayList<>();
 
     @Override
@@ -89,46 +68,37 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     public void onMapReady(@NonNull GoogleMap googleMap) {
         map = googleMap;
 
-        // Move câmera para a posição inicial
         map.moveCamera(CameraUpdateFactory.newLatLngZoom(DEFAULT_LOCATION, DEFAULT_ZOOM));
 
-        // Configura o listener de clique uma única vez
         map.setOnMarkerClickListener(marker -> {
             String rotaId = (String) marker.getTag();
             Log.d(TAG, "onMarkerClick! Marker ID (tag) = " + rotaId);
 
             if (rotaId == null) {
                 Toast.makeText(MapsActivity.this, "ID da rota não encontrado", Toast.LENGTH_SHORT).show();
-                return true; // consome o clique para não abrir InfoWindow sem dados
+                return true;
             }
 
             drawRouteForMarker(rotaId, marker);
-            return false; // permite que o próprio Maps abra a InfoWindow do marcador
+            return false;
         });
 
-        // 1) Pré-carrega todas as rotas do Firestore em routeDataMap
         loadAllRoutesFromFirestore();
     }
 
-    /**
-     * Carrega todos os documentos da coleção "rotas" no Firestore e preenche routeDataMap.
-     * Importante: agora buscamos "geojson" (tudo minúsculo).
-     * Se a coleção tiver outro nome, altere firestore.collection("rotas") para o nome correto.
-     */
     private void loadAllRoutesFromFirestore() {
-        firestore.collection("rotas")  // <-- ajuste aqui se sua coleção tiver nome diferente
+        firestore.collection("rotas")
                 .get()
                 .addOnSuccessListener((QuerySnapshot querySnapshots) -> {
                     Log.d(TAG, "loadAllRoutesFromFirestore: total de documentos = " + querySnapshots.size());
 
                     for (DocumentSnapshot doc : querySnapshots.getDocuments()) {
                         String id = doc.getId();
-                        String geojson = doc.getString("geojson"); // minúsculo
+                        String geojson = doc.getString("geojson");
                         String cor = doc.getString("cor");
                         String rotaNome = doc.getString("rota");
                         Long nrota = doc.getLong("nrota");
 
-                        // Pula documento se faltar algum campo
                         if (geojson == null || cor == null || rotaNome == null || nrota == null) {
                             Log.w(TAG, "Documento 'rotas/" + id + "' incompleto; pulando. " +
                                     "geojson=" + (geojson != null) +
@@ -148,7 +118,6 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
 
                     Log.d(TAG, "loadAllRoutesFromFirestore: routeDataMap.size() = " + routeDataMap.size());
 
-                    // 2) Inicia o listener de localizações após carregar as rotas
                     startListeningLocations();
                 })
                 .addOnFailureListener(e -> {
@@ -158,27 +127,17 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                 });
     }
 
-    /**
-     * Inicia o listener para receber atualizações de localização do Realtime Database.
-     * A cada onLocationsUpdate:
-     *   - NÃO removemos currentLayer aqui (para não apagar a rota visível).
-     *   - Removemos apenas os marcadores antigos manualmente e recriamos novos.
-     *   - Os títulos já são setados baseados em routeDataMap (ou "Sem rota" se não encontrar).
-     */
     private void startListeningLocations() {
         locationsRepository.startListening(new LocationsRepository.LocationsListener() {
             @Override
             public void onLocationsUpdate(Map<String, Map<String, Object>> locations) {
                 runOnUiThread(() -> {
-                    // **Não removemos currentLayer aqui!** Mantemos a rota visível até o usuário clicar em outro marcador.
 
-                    // 1) Remove apenas os marcadores antigos
                     for (Marker oldMarker : locationMarkers) {
                         oldMarker.remove();
                     }
                     locationMarkers.clear();
 
-                    // 2) Agrupa localizações pela mesma lat/lng
                     Map<String, List<Map<String, Object>>> grouped = new HashMap<>();
                     for (Map.Entry<String, Map<String, Object>> entry : locations.entrySet()) {
                         Map<String, Object> locData = entry.getValue();
@@ -190,7 +149,6 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                         grouped.computeIfAbsent(key, k -> new ArrayList<>()).add(locData);
                     }
 
-                    // 3) Para cada grupo, cria marcadores com offset
                     for (List<Map<String, Object>> group : grouped.values()) {
                         int index = 0;
                         for (Map<String, Object> locData : group) {
@@ -228,8 +186,6 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                             }
                         }
                     }
-
-                    // **Não redefinimos o listener de clique aqui**, pois já o configuramos em onMapReady.
                 });
             }
 
@@ -243,20 +199,14 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         });
     }
 
-    /**
-     * Desenha o GeoJSON da rota correspondente a routeId (já em routeDataMap).
-     * Remove a camada anterior (se houver) e desenha a nova.
-     */
     private void drawRouteForMarker(String routeId, Marker marker) {
         Log.d(TAG, "drawRouteForMarker: procurando RouteData para ID = " + routeId);
 
-        // 1) Remove camada antiga (se existir)
         if (currentLayer != null) {
             currentLayer.removeLayerFromMap();
             currentLayer = null;
         }
 
-        // 2) Busca RouteData em memória
         RouteData rd = routeDataMap.get(routeId);
         if (rd == null) {
             Log.e(TAG, "drawRouteForMarker: RouteData NULA para ID = " + routeId);
@@ -265,11 +215,9 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         }
 
         try {
-            // 3) Converte string "geojson" para JSONObject
             JSONObject geoJsonObject = new JSONObject(rd.geojson);
             currentLayer = new GeoJsonLayer(map, geoJsonObject);
 
-            // 4) Aplica cor e largura a cada feature LineString
             String corValida = rd.corHex;
             for (GeoJsonFeature feature : currentLayer.getFeatures()) {
                 if (feature.getGeometry() instanceof com.google.maps.android.data.geojson.GeoJsonLineString) {
