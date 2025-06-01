@@ -14,15 +14,16 @@ import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
-import com.google.maps.android.data.geojson.GeoJsonFeature;
-import com.google.maps.android.data.geojson.GeoJsonLineStringStyle;
-import com.google.maps.android.data.geojson.GeoJsonLayer;
+import com.google.android.gms.maps.model.Polyline;
+import com.google.android.gms.maps.model.PolylineOptions;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.QuerySnapshot;
 
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
@@ -30,6 +31,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Esta versão substitui GeoJsonLayer por Polyline,
+ * garantindo que a rota antiga seja removida e a nova desenhada corretamente.
+ */
 public class MapsActivity extends AppCompatActivity implements OnMapReadyCallback {
 
     private static final String TAG = "MapsActivity";
@@ -42,7 +47,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     private FirebaseFirestore firestore;
 
     private final Map<String, RouteData> routeDataMap = new HashMap<>();
-    private GeoJsonLayer currentLayer;
+    private Polyline currentPolyline;
 
     private final List<Marker> locationMarkers = new ArrayList<>();
 
@@ -67,20 +72,21 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     @Override
     public void onMapReady(@NonNull GoogleMap googleMap) {
         map = googleMap;
-
         map.moveCamera(CameraUpdateFactory.newLatLngZoom(DEFAULT_LOCATION, DEFAULT_ZOOM));
 
         map.setOnMarkerClickListener(marker -> {
             String rotaId = (String) marker.getTag();
-            Log.d(TAG, "onMarkerClick! Marker ID (tag) = " + rotaId);
+            Log.d(TAG, "onMarkerClick: rotaId recebido = " + rotaId);
 
             if (rotaId == null) {
                 Toast.makeText(MapsActivity.this, "ID da rota não encontrado", Toast.LENGTH_SHORT).show();
                 return true;
             }
 
-            drawRouteForMarker(rotaId, marker);
-            return false;
+            marker.showInfoWindow();
+
+            drawPolylineForMarker(rotaId);
+            return true;
         });
 
         loadAllRoutesFromFirestore();
@@ -117,7 +123,6 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                     }
 
                     Log.d(TAG, "loadAllRoutesFromFirestore: routeDataMap.size() = " + routeDataMap.size());
-
                     startListeningLocations();
                 })
                 .addOnFailureListener(e -> {
@@ -132,7 +137,6 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
             @Override
             public void onLocationsUpdate(Map<String, Map<String, Object>> locations) {
                 runOnUiThread(() -> {
-
                     for (Marker oldMarker : locationMarkers) {
                         oldMarker.remove();
                     }
@@ -160,14 +164,10 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                                 LatLng originalPos = new LatLng(lat, lng);
                                 LatLng offsetPos = MapUtils.offsetLatLng(originalPos, index);
 
-                                // Define título com base em routeDataMap
                                 RouteData rd = routeDataMap.get(id);
-                                String tituloMarcador;
-                                if (rd != null) {
-                                    tituloMarcador = rd.nrota + " - " + rd.rotaNome;
-                                } else {
-                                    tituloMarcador = "Sem rota";
-                                }
+                                String tituloMarcador = (rd != null)
+                                        ? (rd.nrota + " - " + rd.rotaNome)
+                                        : "Sem rota";
 
                                 MarkerOptions markerOptions = new MarkerOptions()
                                         .position(offsetPos)
@@ -178,9 +178,9 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                                 if (marker != null) {
                                     marker.setTag(id);
                                     locationMarkers.add(marker);
-                                    Log.d(TAG, "Marcador criado: tag = " + id +
-                                            " | título = [" + tituloMarcador + "]" +
-                                            " | posição = " + offsetPos);
+                                    Log.d(TAG, "Marcador criado: tag=" + id +
+                                            " | título=[" + tituloMarcador + "]" +
+                                            " | posição=" + offsetPos);
                                 }
                                 index++;
                             }
@@ -199,46 +199,89 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         });
     }
 
-    private void drawRouteForMarker(String routeId, Marker marker) {
-        Log.d(TAG, "drawRouteForMarker: procurando RouteData para ID = " + routeId);
+    private void drawPolylineForMarker(String routeId) {
+        Log.d(TAG, "drawPolylineForMarker: iniciado para routeId=" + routeId);
 
-        if (currentLayer != null) {
-            currentLayer.removeLayerFromMap();
-            currentLayer = null;
+        if (currentPolyline != null) {
+            Log.d(TAG, "Removendo Polyline anterior");
+            currentPolyline.remove();
+            currentPolyline = null;
         }
 
         RouteData rd = routeDataMap.get(routeId);
         if (rd == null) {
-            Log.e(TAG, "drawRouteForMarker: RouteData NULA para ID = " + routeId);
+            Log.e(TAG, "RouteData NULA para ID = " + routeId);
             Toast.makeText(this, "Rota não encontrada para ID: " + routeId, Toast.LENGTH_SHORT).show();
             return;
         }
 
         try {
-            JSONObject geoJsonObject = new JSONObject(rd.geojson);
-            currentLayer = new GeoJsonLayer(map, geoJsonObject);
+            JSONObject root = new JSONObject(rd.geojson);
+            List<LatLng> allPoints = new ArrayList<>();
 
-            String corValida = rd.corHex;
-            for (GeoJsonFeature feature : currentLayer.getFeatures()) {
-                if (feature.getGeometry() instanceof com.google.maps.android.data.geojson.GeoJsonLineString) {
-                    GeoJsonLineStringStyle style = feature.getLineStringStyle();
-                    if (style == null) {
-                        style = new GeoJsonLineStringStyle();
-                        feature.setLineStringStyle(style);
+            if (root.has("features")) {
+                JSONArray features = root.getJSONArray("features");
+                for (int i = 0; i < features.length(); i++) {
+                    JSONObject feature = features.getJSONObject(i);
+                    if (!feature.has("geometry")) continue;
+                    JSONObject geometry = feature.getJSONObject("geometry");
+                    String type = geometry.getString("type");
+                    if ("LineString".equals(type)) {
+                        JSONArray coords = geometry.getJSONArray("coordinates");
+                        for (int j = 0; j < coords.length(); j++) {
+                            JSONArray point = coords.getJSONArray(j);
+                            double lng = point.getDouble(0);
+                            double lat = point.getDouble(1);
+                            allPoints.add(new LatLng(lat, lng));
+                        }
                     }
-                    style.setColor(Color.parseColor(corValida));
-                    style.setWidth(8);
+                }
+            } else if (root.has("geometry")) {
+                JSONObject geometry = root.getJSONObject("geometry");
+                String type = geometry.getString("type");
+                if ("LineString".equals(type)) {
+                    JSONArray coords = geometry.getJSONArray("coordinates");
+                    for (int j = 0; j < coords.length(); j++) {
+                        JSONArray point = coords.getJSONArray(j);
+                        double lng = point.getDouble(0);
+                        double lat = point.getDouble(1);
+                        allPoints.add(new LatLng(lat, lng));
+                    }
+                }
+            } else if ("LineString".equals(root.optString("type"))) {
+                JSONArray coords = root.getJSONArray("coordinates");
+                for (int j = 0; j < coords.length(); j++) {
+                    JSONArray point = coords.getJSONArray(j);
+                    double lng = point.getDouble(0);
+                    double lat = point.getDouble(1);
+                    allPoints.add(new LatLng(lat, lng));
                 }
             }
 
+            if (allPoints.isEmpty()) {
+                Log.e(TAG, "Nenhum ponto encontrado no GeoJSON para rotaId=" + routeId);
+                Toast.makeText(this, "GeoJSON sem coordenadas válidas.", Toast.LENGTH_SHORT).show();
+                return;
+            }
 
-            currentLayer.addLayerToMap();
-            Log.d(TAG, "drawRouteForMarker: rota desenhada para ID = " + routeId);
+            PolylineOptions polyOpts = new PolylineOptions()
+                    .addAll(allPoints)
+                    .color(Color.parseColor(rd.corHex))
+                    .width(8f);
+            currentPolyline = map.addPolyline(polyOpts);
+            Log.d(TAG, "Polyline adicionada para rotaId=" + routeId);
+            Toast.makeText(this, "Rota desenhada: " + routeId, Toast.LENGTH_SHORT).show();
+
+            LatLngBounds.Builder builder = new LatLngBounds.Builder();
+            for (LatLng p : allPoints) {
+                builder.include(p);
+            }
+            LatLngBounds bounds = builder.build();
+            map.animateCamera(CameraUpdateFactory.newLatLngBounds(bounds, 100));
 
         } catch (Exception e) {
-            Log.e(TAG, "Erro ao desenhar GeoJSON para ID = " + routeId + ": " + e.getMessage(), e);
-            Toast.makeText(this,
-                    "Erro ao desenhar rota: " + e.getMessage(), Toast.LENGTH_LONG).show();
+            Log.e(TAG, "Erro ao parsear/desenhar Polyline para ID=" + routeId + ": " + e.getMessage(), e);
+            Toast.makeText(this, "Erro ao desenhar rota: " + e.getMessage(), Toast.LENGTH_LONG).show();
         }
     }
 
