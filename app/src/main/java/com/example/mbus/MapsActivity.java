@@ -31,10 +31,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-/**
- * Esta versão substitui GeoJsonLayer por Polyline,
- * garantindo que a rota antiga seja removida e a nova desenhada corretamente.
- */
+
 public class MapsActivity extends AppCompatActivity implements OnMapReadyCallback {
 
     private static final String TAG = "MapsActivity";
@@ -50,6 +47,8 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     private Polyline currentPolyline;
 
     private final List<Marker> locationMarkers = new ArrayList<>();
+    private List<Polyline> currentPolylines = new ArrayList<>();
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -202,10 +201,12 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     private void drawPolylineForMarker(String routeId) {
         Log.d(TAG, "drawPolylineForMarker: iniciado para routeId=" + routeId);
 
-        if (currentPolyline != null) {
-            Log.d(TAG, "Removendo Polyline anterior");
-            currentPolyline.remove();
-            currentPolyline = null;
+        // Remove as polylines anteriores do mapa
+        if (currentPolylines != null) {
+            for (Polyline polyline : currentPolylines) {
+                polyline.remove();
+            }
+            currentPolylines.clear();
         }
 
         RouteData rd = routeDataMap.get(routeId);
@@ -217,66 +218,81 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
 
         try {
             JSONObject root = new JSONObject(rd.geojson);
-            List<LatLng> allPoints = new ArrayList<>();
+            List<LatLng> allPointsForBounds = new ArrayList<>();
 
             if (root.has("features")) {
                 JSONArray features = root.getJSONArray("features");
                 for (int i = 0; i < features.length(); i++) {
                     JSONObject feature = features.getJSONObject(i);
                     if (!feature.has("geometry")) continue;
+
                     JSONObject geometry = feature.getJSONObject("geometry");
                     String type = geometry.getString("type");
+
                     if ("LineString".equals(type)) {
                         JSONArray coords = geometry.getJSONArray("coordinates");
+                        List<LatLng> points = new ArrayList<>();
+
                         for (int j = 0; j < coords.length(); j++) {
                             JSONArray point = coords.getJSONArray(j);
                             double lng = point.getDouble(0);
                             double lat = point.getDouble(1);
-                            allPoints.add(new LatLng(lat, lng));
+                            LatLng latLng = new LatLng(lat, lng);
+                            points.add(latLng);
+                            allPointsForBounds.add(latLng);
                         }
+
+                        // Cria uma Polyline para esta feature e adiciona no mapa
+                        PolylineOptions polyOpts = new PolylineOptions()
+                                .addAll(points)
+                                .color(Color.parseColor(rd.corHex))
+                                .width(8f);
+
+                        Polyline polyline = map.addPolyline(polyOpts);
+                        currentPolylines.add(polyline);
                     }
                 }
-            } else if (root.has("geometry")) {
-                JSONObject geometry = root.getJSONObject("geometry");
-                String type = geometry.getString("type");
+            } else {
+                // Caso o GeoJSON seja só uma LineString direta, sem features
+                String type = root.optString("type");
                 if ("LineString".equals(type)) {
-                    JSONArray coords = geometry.getJSONArray("coordinates");
+                    JSONArray coords = root.getJSONArray("coordinates");
+                    List<LatLng> points = new ArrayList<>();
+
                     for (int j = 0; j < coords.length(); j++) {
                         JSONArray point = coords.getJSONArray(j);
                         double lng = point.getDouble(0);
                         double lat = point.getDouble(1);
-                        allPoints.add(new LatLng(lat, lng));
+                        LatLng latLng = new LatLng(lat, lng);
+                        points.add(latLng);
+                        allPointsForBounds.add(latLng);
                     }
-                }
-            } else if ("LineString".equals(root.optString("type"))) {
-                JSONArray coords = root.getJSONArray("coordinates");
-                for (int j = 0; j < coords.length(); j++) {
-                    JSONArray point = coords.getJSONArray(j);
-                    double lng = point.getDouble(0);
-                    double lat = point.getDouble(1);
-                    allPoints.add(new LatLng(lat, lng));
+
+                    PolylineOptions polyOpts = new PolylineOptions()
+                            .addAll(points)
+                            .color(Color.parseColor(rd.corHex))
+                            .width(8f);
+
+                    Polyline polyline = map.addPolyline(polyOpts);
+                    currentPolylines.add(polyline);
                 }
             }
 
-            if (allPoints.isEmpty()) {
+            if (allPointsForBounds.isEmpty()) {
                 Log.e(TAG, "Nenhum ponto encontrado no GeoJSON para rotaId=" + routeId);
                 Toast.makeText(this, "GeoJSON sem coordenadas válidas.", Toast.LENGTH_SHORT).show();
                 return;
             }
 
-            PolylineOptions polyOpts = new PolylineOptions()
-                    .addAll(allPoints)
-                    .color(Color.parseColor(rd.corHex))
-                    .width(8f);
-            currentPolyline = map.addPolyline(polyOpts);
-            Log.d(TAG, "Polyline adicionada para rotaId=" + routeId);
-
+            // Ajusta câmera para mostrar toda a rota desenhada
             LatLngBounds.Builder builder = new LatLngBounds.Builder();
-            for (LatLng p : allPoints) {
+            for (LatLng p : allPointsForBounds) {
                 builder.include(p);
             }
             LatLngBounds bounds = builder.build();
             map.animateCamera(CameraUpdateFactory.newLatLngBounds(bounds, 100));
+
+            Log.d(TAG, "Polylines adicionadas para rotaId=" + routeId);
 
         } catch (Exception e) {
             Log.e(TAG, "Erro ao parsear/desenhar Polyline para ID=" + routeId + ": " + e.getMessage(), e);
