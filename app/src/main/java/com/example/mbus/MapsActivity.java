@@ -55,9 +55,11 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_maps);
 
+        // Inicializa o repositório de localizações e o Firestore
         locationsRepository = new LocationsRepository();
         firestore = FirebaseFirestore.getInstance();
 
+        // Obtém o fragmento do mapa e inicializa o callback
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
 
@@ -68,11 +70,13 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         }
     }
 
+    // Função chamada quando o mapa estiver pronto para ser usado
     @Override
     public void onMapReady(@NonNull GoogleMap googleMap) {
         map = googleMap;
         map.moveCamera(CameraUpdateFactory.newLatLngZoom(DEFAULT_LOCATION, DEFAULT_ZOOM));
 
+        // Define comportamento ao clicar num marcador
         map.setOnMarkerClickListener(marker -> {
             String rotaId = (String) marker.getTag();
             Log.d(TAG, "onMarkerClick: rotaId recebido = " + rotaId);
@@ -83,7 +87,6 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
             }
 
             marker.showInfoWindow();
-
             drawPolylineForMarker(rotaId);
             return true;
         });
@@ -91,6 +94,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         loadAllRoutesFromFirestore();
     }
 
+    // Carrega todos os documentos da coleção "rotas" do Firestore
     private void loadAllRoutesFromFirestore() {
         firestore.collection("rotas")
                 .get()
@@ -113,6 +117,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                             continue;
                         }
 
+                        // Armazena os dados da rota no mapa local
                         RouteData rd = new RouteData(geojson, cor, rotaNome, nrota);
                         routeDataMap.put(id, rd);
                         Log.d(TAG, "RouteData carregado: id=" + id +
@@ -131,6 +136,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                 });
     }
 
+    // Inicia a "escuta" de atualizações de localização em tempo real
     private void startListeningLocations() {
         locationsRepository.startListening(new LocationsRepository.LocationsListener() {
             @Override
@@ -141,6 +147,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                     }
                     locationMarkers.clear();
 
+                    // Agrupa localizações por coordenadas
                     Map<String, List<Map<String, Object>>> grouped = new HashMap<>();
                     for (Map.Entry<String, Map<String, Object>> entry : locations.entrySet()) {
                         Map<String, Object> locData = entry.getValue();
@@ -152,6 +159,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                         grouped.computeIfAbsent(key, k -> new ArrayList<>()).add(locData);
                     }
 
+                    // Cria os marcadores no mapa
                     for (List<Map<String, Object>> group : grouped.values()) {
                         int index = 0;
                         for (Map<String, Object> locData : group) {
@@ -198,6 +206,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         });
     }
 
+    // Desenha a polyline(rota) correspondente ao marcador clicado
     private void drawPolylineForMarker(String routeId) {
         Log.d(TAG, "drawPolylineForMarker: iniciado para routeId=" + routeId);
 
@@ -220,6 +229,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
             JSONObject root = new JSONObject(rd.geojson);
             List<LatLng> allPointsForBounds = new ArrayList<>();
 
+            // Caso com múltiplas features (GeoJSON padrão)
             if (root.has("features")) {
                 JSONArray features = root.getJSONArray("features");
                 for (int i = 0; i < features.length(); i++) {
@@ -242,7 +252,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                             allPointsForBounds.add(latLng);
                         }
 
-                        // Cria uma Polyline para esta feature e adiciona no mapa
+                        // "Desenha" a polyline
                         PolylineOptions polyOpts = new PolylineOptions()
                                 .addAll(points)
                                 .color(Color.parseColor(rd.corHex))
@@ -300,6 +310,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         }
     }
 
+    // Converte diferentes tipos de valores para Double, de forma segura
     private Double getDouble(Object obj) {
         if (obj instanceof Double) return (Double) obj;
         if (obj instanceof Float) return ((Float) obj).doubleValue();
@@ -318,6 +329,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         final String rotaNome;
         final Long   nrota;
 
+        // Classe interna que guarda os dados de cada rota
         RouteData(String geojson, String corHex, String rotaNome, Long nrota) {
             this.geojson = geojson;
             this.corHex  = corHex;

@@ -2,7 +2,7 @@ package com.example.mbus;
 
 import com.google.android.gms.maps.model.LatLng;
 
-public class MapUtils {
+public class MapUtils { //Separa os marcadores
 
     public static LatLng offsetLatLng(LatLng original, int index) {
         if (index == 0) return original;

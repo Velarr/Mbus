@@ -11,7 +11,7 @@ import com.google.firebase.database.ValueEventListener;
 import java.util.HashMap;
 import java.util.Map;
 
-public class LocationsRepository {
+public class LocationsRepository {   // Conecta e "escuta" em tempo real
 
     private final DatabaseReference locationsRef;
 
