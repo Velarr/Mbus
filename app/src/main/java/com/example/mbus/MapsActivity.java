@@ -270,7 +270,6 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                     .width(8f);
             currentPolyline = map.addPolyline(polyOpts);
             Log.d(TAG, "Polyline adicionada para rotaId=" + routeId);
-            Toast.makeText(this, "Rota desenhada: " + routeId, Toast.LENGTH_SHORT).show();
 
             LatLngBounds.Builder builder = new LatLngBounds.Builder();
             for (LatLng p : allPoints) {

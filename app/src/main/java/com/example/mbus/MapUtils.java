@@ -4,9 +4,6 @@ import com.google.android.gms.maps.model.LatLng;
 
 public class MapUtils {
 
-    /**
-     * Aplica um pequeno offset para evitar sobreposição de marcadores na mesma posição.
-     */
     public static LatLng offsetLatLng(LatLng original, int index) {
         if (index == 0) return original;
 
