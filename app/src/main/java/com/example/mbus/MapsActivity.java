@@ -3,6 +3,7 @@ package com.example.mbus;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.util.Log;
+import android.widget.LinearLayout;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
@@ -19,6 +20,11 @@ import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.Polyline;
 import com.google.android.gms.maps.model.PolylineOptions;
+import com.google.android.gms.maps.model.RoundCap;
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.QuerySnapshot;
@@ -43,11 +49,12 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     private LocationsRepository locationsRepository;
     private FirebaseFirestore firestore;
 
-    private final Map<String, RouteData> routeDataMap = new HashMap<>();
+    private final Map<String, BusInfo> routeDataMap = new HashMap<>();
     private Polyline currentPolyline;
 
     private final List<Marker> locationMarkers = new ArrayList<>();
     private List<Polyline> currentPolylines = new ArrayList<>();
+    private List<BusInfo> currentBusList = new ArrayList<>();
 
 
     @Override
@@ -55,11 +62,25 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_maps);
 
-        // Inicializa o repositório de localizações e o Firestore
         locationsRepository = new LocationsRepository();
         firestore = FirebaseFirestore.getInstance();
 
-        // Obtém o fragmento do mapa e inicializa o callback
+        LinearLayout btnBus = findViewById(R.id.btn_bus);
+        btnBus.setOnClickListener(v -> {
+            locationsRepository.startListeningBuses(new LocationsRepository.BusListListener() {
+                @Override
+                public void onBusListUpdate(List<BusInfo> buses) {
+                    BusBottomSheetDialogFragment bottomSheet = new BusBottomSheetDialogFragment(buses);
+                    bottomSheet.show(getSupportFragmentManager(), "bus_bottom_sheet");
+                }
+
+                @Override
+                public void onError(String message) {
+                    Log.e("MapsActivity", "Erro ao carregar lista de autocarros: " + message);
+                }
+            });
+        });
+
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
 
@@ -69,6 +90,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
             Toast.makeText(this, "Erro ao carregar o mapa.", Toast.LENGTH_SHORT).show();
         }
     }
+
 
     // Função chamada quando o mapa estiver pronto para ser usado
     @Override
@@ -118,9 +140,9 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                         }
 
                         // Armazena os dados da rota no mapa local
-                        RouteData rd = new RouteData(geojson, cor, rotaNome, nrota);
+                        BusInfo rd = new BusInfo(geojson, cor, rotaNome, nrota.intValue());
                         routeDataMap.put(id, rd);
-                        Log.d(TAG, "RouteData carregado: id=" + id +
+                        Log.d(TAG, "BusInfo carregado: id=" + id +
                                 " | rotaNome=" + rotaNome +
                                 " | nrota=" + nrota +
                                 " | cor=" + cor);
@@ -171,7 +193,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                                 LatLng originalPos = new LatLng(lat, lng);
                                 LatLng offsetPos = MapUtils.offsetLatLng(originalPos, index);
 
-                                RouteData rd = routeDataMap.get(id);
+                                BusInfo rd = routeDataMap.get(id);
                                 String tituloMarcador = (rd != null)
                                         ? (rd.nrota + " - " + rd.rotaNome)
                                         : "Sem rota";
@@ -218,7 +240,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
             currentPolylines.clear();
         }
 
-        RouteData rd = routeDataMap.get(routeId);
+        BusInfo rd = routeDataMap.get(routeId);
         if (rd == null) {
             Log.e(TAG, "RouteData NULA para ID = " + routeId);
             Toast.makeText(this, "Rota não encontrada para ID: " + routeId, Toast.LENGTH_SHORT).show();
@@ -252,11 +274,12 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                             allPointsForBounds.add(latLng);
                         }
 
-                        // "Desenha" a polyline
                         PolylineOptions polyOpts = new PolylineOptions()
                                 .addAll(points)
                                 .color(Color.parseColor(rd.corHex))
-                                .width(8f);
+                                .width(8f)
+                                .startCap(new RoundCap())
+                                .endCap(new RoundCap());
 
                         Polyline polyline = map.addPolyline(polyOpts);
                         currentPolylines.add(polyline);
@@ -281,7 +304,9 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                     PolylineOptions polyOpts = new PolylineOptions()
                             .addAll(points)
                             .color(Color.parseColor(rd.corHex))
-                            .width(8f);
+                            .width(8f)
+                            .startCap(new RoundCap())
+                            .endCap(new RoundCap());
 
                     Polyline polyline = map.addPolyline(polyOpts);
                     currentPolylines.add(polyline);
@@ -321,20 +346,5 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
             } catch (NumberFormatException ignored) { }
         }
         return null;
-    }
-
-    private static class RouteData {
-        final String geojson;
-        final String corHex;
-        final String rotaNome;
-        final Long   nrota;
-
-        // Classe interna que guarda os dados de cada rota
-        RouteData(String geojson, String corHex, String rotaNome, Long nrota) {
-            this.geojson = geojson;
-            this.corHex  = corHex;
-            this.rotaNome = rotaNome;
-            this.nrota   = nrota;
-        }
     }
 }

@@ -7,16 +7,24 @@ import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
+import com.google.firebase.firestore.FirebaseFirestore;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
-public class LocationsRepository {   // Conecta e "escuta" em tempo real
+public class LocationsRepository {
 
     private final DatabaseReference locationsRef;
 
     public interface LocationsListener {
         void onLocationsUpdate(Map<String, Map<String, Object>> locations);
+        void onError(String message);
+    }
+
+    public interface BusListListener {
+        void onBusListUpdate(List<BusInfo> buses);
         void onError(String message);
     }
 
@@ -29,15 +37,79 @@ public class LocationsRepository {   // Conecta e "escuta" em tempo real
             @Override
             public void onDataChange(@NonNull DataSnapshot snapshot) {
                 Map<String, Map<String, Object>> locations = new HashMap<>();
-
                 for (DataSnapshot child : snapshot.getChildren()) {
                     Map<String, Object> data = (Map<String, Object>) child.getValue();
                     if (data != null) {
                         locations.put(child.getKey(), data);
                     }
                 }
-
                 listener.onLocationsUpdate(locations);
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {
+                listener.onError(error.getMessage());
+            }
+        });
+    }
+
+    public void startListeningBuses(final BusListListener listener) {
+        DatabaseReference locationsRef = FirebaseDatabase.getInstance().getReference("locations");
+        locationsRef.addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                if (!snapshot.exists()) {
+                    listener.onBusListUpdate(new ArrayList<>());
+                    return;
+                }
+
+                List<BusInfo> buses = new ArrayList<>();
+                List<String> idsFirestore = new ArrayList<>();
+
+                for (DataSnapshot child : snapshot.getChildren()) {
+                    Map<String, Object> data = (Map<String, Object>) child.getValue();
+                    if (data != null && data.get("id") != null) {
+                        String idFirestore = (String) data.get("id");
+                        idsFirestore.add(idFirestore);
+                    }
+                }
+
+                FirebaseFirestore db = FirebaseFirestore.getInstance();
+                final int totalIds = idsFirestore.size();
+                final int[] completedCount = {0};
+
+                if (totalIds == 0) {
+                    listener.onBusListUpdate(buses);
+                    return;
+                }
+
+                for (String id : idsFirestore) {
+                    db.collection("rotas")
+                            .document(id)
+                            .get()
+                            .addOnSuccessListener(documentSnapshot -> {
+                                if (documentSnapshot.exists()) {
+                                    String companhia = documentSnapshot.getString("companhia");
+                                    Long nrotaLong = documentSnapshot.getLong("nrota");
+                                    int nrota = nrotaLong != null ? nrotaLong.intValue() : 0;
+                                    String rotaNome = documentSnapshot.getString("rota");
+                                    String geojson = documentSnapshot.getString("geojson");
+                                    String corHex = documentSnapshot.getString("cor");
+
+                                    buses.add(new BusInfo(id, companhia, nrota, rotaNome, geojson, corHex));
+                                }
+                                completedCount[0]++;
+                                if (completedCount[0] == totalIds) {
+                                    listener.onBusListUpdate(buses);
+                                }
+                            })
+                            .addOnFailureListener(e -> {
+                                completedCount[0]++;
+                                if (completedCount[0] == totalIds) {
+                                    listener.onBusListUpdate(buses);
+                                }
+                            });
+                }
             }
 
             @Override
