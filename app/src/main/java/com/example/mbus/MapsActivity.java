@@ -10,6 +10,8 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.example.mbus.OnBusSelectedListener;
+
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
@@ -22,10 +24,6 @@ import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.Polyline;
 import com.google.android.gms.maps.model.PolylineOptions;
 import com.google.android.gms.maps.model.RoundCap;
-import com.google.firebase.database.DataSnapshot;
-import com.google.firebase.database.DatabaseError;
-import com.google.firebase.database.DatabaseReference;
-import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.QuerySnapshot;
@@ -39,7 +37,7 @@ import java.util.List;
 import java.util.Map;
 
 
-public class MapsActivity extends AppCompatActivity implements OnMapReadyCallback {
+public class MapsActivity extends AppCompatActivity implements OnMapReadyCallback, OnBusSelectedListener {
 
     private static final String TAG = "MapsActivity";
 
@@ -344,6 +342,18 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         } catch (Exception e) {
             Log.e(TAG, "Erro ao parsear/desenhar Polyline para ID=" + routeId + ": " + e.getMessage(), e);
             Toast.makeText(this, "Erro ao desenhar rota: " + e.getMessage(), Toast.LENGTH_LONG).show();
+        }
+    }
+
+    @Override
+    public void onBusSelected(String routeId) {
+        for (Marker marker : locationMarkers) {
+            if (routeId.equals(marker.getTag())) {
+                marker.showInfoWindow();
+                drawPolylineForMarker(routeId);
+                map.animateCamera(CameraUpdateFactory.newLatLng(marker.getPosition()));
+                break;
+            }
         }
     }
 
