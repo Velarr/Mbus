@@ -1,5 +1,6 @@
 package com.example.mbus;
 
+import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.util.Log;
@@ -198,10 +199,20 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                                         ? (rd.nrota + " - " + rd.rotaNome)
                                         : "Sem rota";
 
+                                // Cria ícone personalizado com número do autocarro e cor da rota
+                                Bitmap customIcon = MarkerUtils.createBusMarkerIcon(
+                                        MapsActivity.this,
+                                        rd != null ? rd.nrota : 0,                     // número do autocarro
+                                        75,                                           // tamanho do ícone (pixels)
+                                        rd != null ? Color.parseColor(rd.corHex) : Color.RED, // cor do círculo
+                                        Color.WHITE                                    // cor do texto (número)
+
+                                );
+
                                 MarkerOptions markerOptions = new MarkerOptions()
                                         .position(offsetPos)
                                         .title(tituloMarcador)
-                                        .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED));
+                                        .icon(BitmapDescriptorFactory.fromBitmap(customIcon));
 
                                 Marker marker = map.addMarker(markerOptions);
                                 if (marker != null) {
@@ -227,6 +238,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
             }
         });
     }
+
 
     // Desenha a polyline(rota) correspondente ao marcador clicado
     private void drawPolylineForMarker(String routeId) {
