@@ -1,9 +1,8 @@
-package com.example.mbus;
+package com.example.mbus.ui;
 
 import android.app.Dialog;
 import android.content.Context;
 import android.content.res.Resources;
-import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.view.View;
@@ -17,10 +16,12 @@ import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.example.mbus.data.BusInfo;
+import com.example.mbus.listeners.OnBusSelectedListener;
+import com.example.mbus.R;
+import com.example.mbus.ui.adapters.BusAdapter;
 import com.google.android.material.bottomsheet.BottomSheetBehavior;
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment;
-import com.google.firebase.firestore.DocumentSnapshot;
-import com.google.firebase.firestore.FirebaseFirestore;
 
 import java.util.ArrayList;
 import java.util.Collections;

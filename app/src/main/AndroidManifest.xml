@@ -22,7 +22,7 @@
             android:value="AIzaSyCbC9hK8flH7WifT7uLYNiNpwyWzAcyNHY" />
 
         <activity
-            android:name=".MapsActivity"
+            android:name=".ui.MapsActivity"
             android:exported="true"
             android:label="@string/title_activity_maps">
             <intent-filter>
@@ -30,11 +30,7 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <activity
-            android:name=".Receiver"
-            android:exported="true"
-            android:label="@string/title_activity_maps">
-        </activity>
+        <activity android:name=".ui.SchedulesActivity" />
     </application>
 
 </manifest>

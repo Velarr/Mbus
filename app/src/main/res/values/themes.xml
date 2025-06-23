@@ -15,7 +15,6 @@
         <item name="android:fitsSystemWindows">false</item>
         <!-- Customize your theme here. -->
         <!-- Desativar a ActionBar -->
-        <item name="windowActionBar">false</item>
         <item name="windowNoTitle">true</item>
     </style>
 </resources>

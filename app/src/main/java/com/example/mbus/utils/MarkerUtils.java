@@ -1,13 +1,10 @@
-package com.example.mbus;
+package com.example.mbus.utils;
 
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
-import android.graphics.Typeface;
-
-import androidx.core.content.ContextCompat;
 
 public class MarkerUtils {
 

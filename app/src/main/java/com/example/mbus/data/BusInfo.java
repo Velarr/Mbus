@@ -1,4 +1,4 @@
-package com.example.mbus;
+package com.example.mbus.data;
 
 public class BusInfo {
     public String id;
@@ -24,7 +24,28 @@ public class BusInfo {
         this.nrota = nrota;
     }
 
+    // Getters
+    public String getId() {
+        return id;
+    }
+
+    public String getCompanhia() {
+        return companhia;
+    }
+
+    public int getNrota() {
+        return nrota;
+    }
+
+    public String getRotaNome() {
+        return rotaNome;
+    }
+
+    public String getGeojson() {
+        return geojson;
+    }
+
+    public String getCorHex() {
+        return corHex;
+    }
 }
-
-
-

@@ -1,12 +1,13 @@
-package com.example.mbus;
+package com.example.mbus.ui;
 
 import android.content.Context;
 import android.util.Log;
-import android.view.MenuItem;
 import android.view.View;
-import android.widget.PopupMenu;
 
 import androidx.appcompat.app.AppCompatActivity;
+
+import com.example.mbus.data.BusInfo;
+import com.example.mbus.data.LocationsRepository;
 
 import java.util.List;
 

@@ -1,4 +1,4 @@
-package com.example.mbus;
+package com.example.mbus.data;
 
 import androidx.annotation.NonNull;
 

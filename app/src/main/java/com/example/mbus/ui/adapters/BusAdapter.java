@@ -1,4 +1,4 @@
-package com.example.mbus;
+package com.example.mbus.ui.adapters;
 
 import android.view.LayoutInflater;
 import android.view.View;
@@ -7,6 +7,9 @@ import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
+
+import com.example.mbus.data.BusInfo;
+import com.example.mbus.listeners.OnBusSelectedListener;
 
 import java.util.List;
 

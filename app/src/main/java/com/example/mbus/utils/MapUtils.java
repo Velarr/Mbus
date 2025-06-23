@@ -1,4 +1,4 @@
-package com.example.mbus;
+package com.example.mbus.utils;
 
 import com.google.android.gms.maps.model.LatLng;
 
