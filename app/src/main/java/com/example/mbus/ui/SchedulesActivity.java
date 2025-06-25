@@ -45,13 +45,13 @@ public class SchedulesActivity extends AppCompatActivity {
                     busList.clear();
                     for (var doc : queryDocumentSnapshots) {
                         String id = doc.getId();
-                        String companhia = doc.getString("companhia");
-                        int nrota = doc.getLong("nrota").intValue();
-                        String rotaNome = doc.getString("rota");
+                        String companyName = doc.getString("companyName");
+                        int routeNumber = doc.getLong("routeNumber").intValue();
+                        String routeName = doc.getString("routeName");
                         String geojson = doc.getString("geojson");
-                        String cor = doc.getString("cor");
+                        String color = doc.getString("color");
 
-                        busList.add(new BusInfo(id, companhia, nrota, rotaNome, geojson, cor));
+                        busList.add(new BusInfo(id, companyName, routeNumber, routeName, geojson, color));
                     }
                     adapter.notifyDataSetChanged();
                 })

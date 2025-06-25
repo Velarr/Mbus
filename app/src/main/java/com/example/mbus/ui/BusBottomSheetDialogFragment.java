@@ -1,5 +1,6 @@
 package com.example.mbus.ui;
 
+import android.annotation.SuppressLint;
 import android.app.Dialog;
 import android.content.Context;
 import android.content.res.Resources;
@@ -16,9 +17,9 @@ import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.example.mbus.R;
 import com.example.mbus.data.BusInfo;
 import com.example.mbus.listeners.OnBusSelectedListener;
-import com.example.mbus.R;
 import com.example.mbus.ui.adapters.BusAdapter;
 import com.google.android.material.bottomsheet.BottomSheetBehavior;
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment;
@@ -44,6 +45,7 @@ public class BusBottomSheetDialogFragment extends BottomSheetDialogFragment {
         this.busList = buses;
     }
 
+    @SuppressLint("RestrictedApi")
     @Override
     public void setupDialog(@NonNull Dialog dialog, int style) {
         View contentView = View.inflate(getContext(), R.layout.bottom_sheet_buses, null);
@@ -100,8 +102,9 @@ public class BusBottomSheetDialogFragment extends BottomSheetDialogFragment {
         companySet.add("Todos");
 
         for (BusInfo bus : busList) {
-            if (bus.companhia != null && !bus.companhia.isEmpty()) {
-                companySet.add(bus.companhia);
+            String companyName = bus.getCompanyName();
+            if (companyName != null && !companyName.isEmpty()) {
+                companySet.add(companyName);
             }
         }
 
@@ -122,10 +125,12 @@ public class BusBottomSheetDialogFragment extends BottomSheetDialogFragment {
         List<BusInfo> filtered = new ArrayList<>();
 
         for (BusInfo bus : busList) {
-            boolean matchesCompany = selectedCompany.equals("Todos") || bus.companhia.equalsIgnoreCase(selectedCompany);
+            String companyName = bus.getCompanyName() != null ? bus.getCompanyName() : "";
+
+            boolean matchesCompany = selectedCompany.equals("Todos") || companyName.equalsIgnoreCase(selectedCompany);
             boolean matchesSearch = searchQuery.isEmpty()
-                    || String.valueOf(bus.nrota).contains(searchQuery)
-                    || bus.rotaNome.toLowerCase().contains(searchQuery.toLowerCase());
+                    || String.valueOf(bus.getRouteNumber()).contains(searchQuery)
+                    || bus.getRouteName().toLowerCase().contains(searchQuery.toLowerCase());
 
             if (matchesCompany && matchesSearch) {
                 filtered.add(bus);
@@ -139,6 +144,7 @@ public class BusBottomSheetDialogFragment extends BottomSheetDialogFragment {
             dismiss(); // Fecha o BottomSheet após seleção
         }));
     }
+
 
     @Override
     public void onAttach(@NonNull Context context) {

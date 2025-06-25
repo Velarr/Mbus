@@ -124,15 +124,15 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     }
 
     private void loadAllRoutesFromFirestore() {
-        firestore.collection("rotas")
+        firestore.collection("routes")
                 .get()
                 .addOnSuccessListener(querySnapshots -> {
                     for (DocumentSnapshot doc : querySnapshots.getDocuments()) {
                         String id = doc.getId();
                         String geojson = doc.getString("geojson");
-                        String color = doc.getString("cor");
-                        String routeName = doc.getString("rota");
-                        Long routeNumber = doc.getLong("nrota");
+                        String color = doc.getString("color");
+                        String routeName = doc.getString("routeName");
+                        Long routeNumber = doc.getLong("routeNumber");
 
                         if (geojson == null || color == null || routeName == null || routeNumber == null) {
                             continue;
@@ -183,14 +183,21 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
 
                                 BusInfo route = routeDataMap.get(id);
                                 String markerTitle = (route != null)
-                                        ? (route.nrota + " - " + route.rotaNome)
+                                        ? (route.getRouteNumber() + " - " + route.getRouteName())
                                         : "Sem rota";
+
+                                int number = route != null ? route.getRouteNumber() : 0;
+                                String colorStr = route != null ? route.getColor() : "#FF0000"; // fallback vermelho
+                                int color = Color.RED;
+                                try {
+                                    color = Color.parseColor(colorStr);
+                                } catch (IllegalArgumentException ignored) {}
 
                                 Bitmap customIcon = MarkerUtils.createBusMarkerIcon(
                                         MapsActivity.this,
-                                        route != null ? route.nrota : 0,
+                                        number,
                                         75,
-                                        route != null ? Color.parseColor(route.corHex) : Color.RED,
+                                        color,
                                         Color.WHITE
                                 );
 
@@ -236,7 +243,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         }
 
         try {
-            JSONObject root = new JSONObject(route.geojson);
+            JSONObject root = new JSONObject(route.getGeojson());
             List<LatLng> boundsPoints = new ArrayList<>();
 
             if (root.has("features")) {
@@ -261,9 +268,14 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                             boundsPoints.add(latLng);
                         }
 
+                        int color = Color.RED;
+                        try {
+                            color = Color.parseColor(route.getColor());
+                        } catch (IllegalArgumentException ignored) {}
+
                         PolylineOptions polyOpts = new PolylineOptions()
                                 .addAll(points)
-                                .color(Color.parseColor(route.corHex))
+                                .color(color)
                                 .width(8f)
                                 .startCap(new RoundCap())
                                 .endCap(new RoundCap());

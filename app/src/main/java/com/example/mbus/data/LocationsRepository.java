@@ -84,19 +84,19 @@ public class LocationsRepository {
                 }
 
                 for (String id : idsFirestore) {
-                    db.collection("rotas")
+                    db.collection("routes")
                             .document(id)
                             .get()
                             .addOnSuccessListener(documentSnapshot -> {
                                 if (documentSnapshot.exists()) {
-                                    String companhia = documentSnapshot.getString("companhia");
-                                    Long nrotaLong = documentSnapshot.getLong("nrota");
-                                    int nrota = nrotaLong != null ? nrotaLong.intValue() : 0;
-                                    String rotaNome = documentSnapshot.getString("rota");
+                                    String companyName = documentSnapshot.getString("companyName");
+                                    Long routeNumberLong = documentSnapshot.getLong("routeNumber");
+                                    int routeNumber = routeNumberLong != null ? routeNumberLong.intValue() : 0;
+                                    String routeName = documentSnapshot.getString("routeName");
                                     String geojson = documentSnapshot.getString("geojson");
-                                    String corHex = documentSnapshot.getString("cor");
+                                    String color = documentSnapshot.getString("color");
 
-                                    buses.add(new BusInfo(id, companhia, nrota, rotaNome, geojson, corHex));
+                                    buses.add(new BusInfo(id, companyName, routeNumber, routeName, geojson, color));
                                 }
                                 completedCount[0]++;
                                 if (completedCount[0] == totalIds) {

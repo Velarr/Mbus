@@ -18,12 +18,10 @@ public class BusAdapter extends RecyclerView.Adapter<BusAdapter.BusViewHolder> {
     private final List<BusInfo> buses;
     private final OnBusSelectedListener listener;
 
-
     public BusAdapter(List<BusInfo> buses, OnBusSelectedListener listener) {
         this.buses = buses;
         this.listener = listener;
     }
-
 
     @NonNull
     @Override
@@ -36,15 +34,21 @@ public class BusAdapter extends RecyclerView.Adapter<BusAdapter.BusViewHolder> {
     @Override
     public void onBindViewHolder(@NonNull BusViewHolder holder, int position) {
         BusInfo bus = buses.get(position);
-        holder.textView.setText(bus.nrota + " - " + bus.rotaNome);
+
+        String displayText;
+        if (bus.getCompanyName() != null && !bus.getCompanyName().isEmpty()) {
+            displayText = bus.getCompanyName() + " | " + bus.getRouteNumber() + " - " + bus.getRouteName();
+        } else {
+            displayText = bus.getRouteNumber() + " - " + bus.getRouteName();
+        }
+
+        holder.textView.setText(displayText);
         holder.itemView.setOnClickListener(v -> {
             if (listener != null) {
-                listener.onBusSelected(bus.id); // envia o ID para a activity
+                listener.onBusSelected(bus.getId());
             }
         });
-
     }
-
 
     @Override
     public int getItemCount() {

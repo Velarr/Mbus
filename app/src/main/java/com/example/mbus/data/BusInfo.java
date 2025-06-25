@@ -1,27 +1,28 @@
 package com.example.mbus.data;
 
 public class BusInfo {
-    public String id;
-    public String companhia;
-    public int nrota;
-    public String rotaNome;
-    public String geojson;
-    public String corHex;
+    private String id;
+    private String companyId;
+    private String companyName;
+    private int routeNumber;
+    private String routeName;
+    private String geojson;
+    private String color;
 
-    public BusInfo(String id, String companhia, int nrota, String rotaNome, String geojson, String corHex) {
+    public BusInfo(String id, String companyId, int routeNumber, String routeName, String geojson, String color) {
         this.id = id;
-        this.companhia = companhia;
-        this.nrota = nrota;
-        this.rotaNome = rotaNome;
+        this.companyId = companyId;
+        this.routeNumber = routeNumber;
+        this.routeName = routeName;
         this.geojson = geojson;
-        this.corHex = corHex;
+        this.color = color;
     }
 
-    public BusInfo(String geojson, String corHex, String rotaNome, int nrota) {
+    public BusInfo(String geojson, String color, String routeName, int routeNumber) {
         this.geojson = geojson;
-        this.corHex = corHex;
-        this.rotaNome = rotaNome;
-        this.nrota = nrota;
+        this.color = color;
+        this.routeName = routeName;
+        this.routeNumber = routeNumber;
     }
 
     // Getters
@@ -29,23 +30,32 @@ public class BusInfo {
         return id;
     }
 
-    public String getCompanhia() {
-        return companhia;
+    public String getCompanyId() {
+        return companyId;
     }
 
-    public int getNrota() {
-        return nrota;
+    public String getCompanyName() {
+        return companyName;
     }
 
-    public String getRotaNome() {
-        return rotaNome;
+    public int getRouteNumber() {
+        return routeNumber;
+    }
+
+    public String getRouteName() {
+        return routeName;
     }
 
     public String getGeojson() {
         return geojson;
     }
 
-    public String getCorHex() {
-        return corHex;
+    public String getColor() {
+        return color;
+    }
+
+    // Setter para companyName (vai ser usado após buscar da Firestore)
+    public void setCompanyName(String companyName) {
+        this.companyName = companyName;
     }
 }
