@@ -17,10 +17,6 @@
         android:theme="@style/Theme.MBus"
         tools:targetApi="31">
 
-        <meta-data
-            android:name="com.google.android.geo.API_KEY"
-            android:value="AIzaSyCbC9hK8flH7WifT7uLYNiNpwyWzAcyNHY" />
-
         <activity
             android:name=".ui.MapsActivity"
             android:exported="true"
@@ -31,6 +27,15 @@
             </intent-filter>
         </activity>
         <activity android:name=".ui.SchedulesActivity" />
+
+        <meta-data
+            android:name="com.google.android.geo.API_KEY"
+            android:value="AIzaSyCbC9hK8flH7WifT7uLYNiNpwyWzAcyNHY" />
+
+        <meta-data
+            android:name="firebase_analytics_collection_enabled"
+            android:value="true" />
+        
     </application>
 
 </manifest>

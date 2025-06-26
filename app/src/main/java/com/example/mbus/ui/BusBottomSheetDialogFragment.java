@@ -1,9 +1,9 @@
 package com.example.mbus.ui;
 
-import android.annotation.SuppressLint;
 import android.app.Dialog;
 import android.content.Context;
 import android.content.res.Resources;
+import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.view.View;
@@ -23,6 +23,7 @@ import com.example.mbus.listeners.OnBusSelectedListener;
 import com.example.mbus.ui.adapters.BusAdapter;
 import com.google.android.material.bottomsheet.BottomSheetBehavior;
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment;
+import com.google.firebase.analytics.FirebaseAnalytics;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -45,7 +46,6 @@ public class BusBottomSheetDialogFragment extends BottomSheetDialogFragment {
         this.busList = buses;
     }
 
-    @SuppressLint("RestrictedApi")
     @Override
     public void setupDialog(@NonNull Dialog dialog, int style) {
         View contentView = View.inflate(getContext(), R.layout.bottom_sheet_buses, null);
@@ -76,22 +76,25 @@ public class BusBottomSheetDialogFragment extends BottomSheetDialogFragment {
 
             @Override
             public void onNothingSelected(AdapterView<?> parent) {
-                companySpinner.setSelection(0); // Força seleção para "Todos"
+                companySpinner.setSelection(0);
             }
         });
 
         searchEditText.addTextChangedListener(new TextWatcher() {
-            @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
 
             @Override
             public void onTextChanged(CharSequence s, int start, int before, int count) {
                 searchQuery = s.toString();
                 updateBusList();
+
+                Bundle searchBundle = new Bundle();
+                searchBundle.putString("searched_company", selectedCompany);
+                searchBundle.putString("search_query", searchQuery);
+                FirebaseAnalytics.getInstance(getContext()).logEvent("bus_search", searchBundle);
             }
 
-            @Override
-            public void afterTextChanged(Editable s) {}
+            @Override public void afterTextChanged(Editable s) {}
         });
 
         updateBusList();
@@ -118,7 +121,7 @@ public class BusBottomSheetDialogFragment extends BottomSheetDialogFragment {
         ArrayAdapter<String> adapter = new ArrayAdapter<>(requireContext(), android.R.layout.simple_spinner_item, companyOptions);
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         companySpinner.setAdapter(adapter);
-        companySpinner.setSelection(0); // Define "Todos" como padrão
+        companySpinner.setSelection(0);
     }
 
     private void updateBusList() {
@@ -141,10 +144,14 @@ public class BusBottomSheetDialogFragment extends BottomSheetDialogFragment {
             if (listener != null) {
                 listener.onBusSelected(id);
             }
-            dismiss(); // Fecha o BottomSheet após seleção
+
+            Bundle selectedBundle = new Bundle();
+            selectedBundle.putString("selected_bus_id", id);
+            FirebaseAnalytics.getInstance(requireContext()).logEvent("bus_selected", selectedBundle);
+
+            dismiss();
         }));
     }
-
 
     @Override
     public void onAttach(@NonNull Context context) {

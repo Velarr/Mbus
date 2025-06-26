@@ -2,12 +2,14 @@ package com.example.mbus.ui;
 
 import android.app.Activity;
 import android.content.Intent;
+import android.os.Bundle;
 import android.util.Log;
 import android.widget.LinearLayout;
 
 import com.example.mbus.R;
 import com.example.mbus.data.BusInfo;
 import com.example.mbus.data.LocationsRepository;
+import com.google.firebase.analytics.FirebaseAnalytics;
 
 import java.util.List;
 
@@ -18,7 +20,6 @@ public class NavigationBar {
         LinearLayout btnBus = activity.findViewById(R.id.btn_bus);
         LinearLayout btnSchedules = activity.findViewById(R.id.btn_schedules);
 
-
         if (btnHome != null) {
             btnHome.setOnClickListener(v -> {
                 if (!(activity instanceof MapsActivity)) {
@@ -27,8 +28,6 @@ public class NavigationBar {
                 }
             });
         }
-
-
 
         if (btnBus != null) {
             btnBus.setOnClickListener(v -> {
@@ -40,6 +39,12 @@ public class NavigationBar {
                         public void onBusListUpdate(List<BusInfo> buses) {
                             BusBottomSheetDialogFragment bottomSheet = new BusBottomSheetDialogFragment(buses);
                             bottomSheet.show(mapsActivity.getSupportFragmentManager(), "bus_bottom_sheet");
+
+                            // ✅ Log do evento após mostrar o menu
+                            FirebaseAnalytics analytics = FirebaseAnalytics.getInstance(activity);
+                            Bundle bundle = new Bundle();
+                            bundle.putString("navigation_menu", "bus");
+                            analytics.logEvent("bus_menu_opened", bundle);
                         }
 
                         @Override
@@ -51,6 +56,11 @@ public class NavigationBar {
                     Intent intent = new Intent(activity, MapsActivity.class);
                     intent.putExtra("open_bus_menu", true);
                     activity.startActivity(intent);
+
+                    FirebaseAnalytics analytics = FirebaseAnalytics.getInstance(activity);
+                    Bundle bundle = new Bundle();
+                    bundle.putString("navigation_menu", "bus");
+                    analytics.logEvent("bus_menu_opened", bundle);
                 }
             });
         }
@@ -63,6 +73,5 @@ public class NavigationBar {
                 }
             });
         }
-
     }
 }
