@@ -20,11 +20,13 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.example.mbus.R;
 import com.example.mbus.data.BusInfo;
 import com.example.mbus.listeners.OnBusSelectedListener;
+import com.example.mbus.listeners.OnBusFilterChangedListener;
 import com.example.mbus.ui.adapters.BusAdapter;
 import com.google.android.material.bottomsheet.BottomSheetBehavior;
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment;
 import com.google.firebase.analytics.FirebaseAnalytics;
 
+import java.text.Normalizer;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
@@ -34,17 +36,23 @@ import java.util.Set;
 public class BusBottomSheetDialogFragment extends BottomSheetDialogFragment {
 
     private final List<BusInfo> busList;
-    private OnBusSelectedListener listener;
+    private final OnBusSelectedListener listener;
+    private final OnBusFilterChangedListener filterChangedListener;
+
     private RecyclerView recyclerView;
     private EditText searchEditText;
     private Spinner companySpinner;
-    private List<String> companyOptions = new ArrayList<>();
 
+    private List<String> companyOptions = new ArrayList<>();
     private static String selectedCompany = "Todos";
     private static String searchQuery = "";
 
-    public BusBottomSheetDialogFragment(List<BusInfo> buses) {
+    public BusBottomSheetDialogFragment(List<BusInfo> buses,
+                                        OnBusSelectedListener listener,
+                                        OnBusFilterChangedListener filterChangedListener) {
         this.busList = buses;
+        this.listener = listener;
+        this.filterChangedListener = filterChangedListener;
     }
 
     @Override
@@ -149,7 +157,6 @@ public class BusBottomSheetDialogFragment extends BottomSheetDialogFragment {
             }
         }
 
-        // Atualiza lista da RecyclerView
         recyclerView.setAdapter(new BusAdapter(filtered, id -> {
             if (listener != null) {
                 listener.onBusSelected(id);
@@ -162,15 +169,14 @@ public class BusBottomSheetDialogFragment extends BottomSheetDialogFragment {
             dismiss();
         }));
 
-        // Notifica MapsActivity para atualizar os marcadores
-        if (getActivity() instanceof MapsActivity) {
-            ((MapsActivity) getActivity()).applyMapFilter(filtered);
+        if (filterChangedListener != null) {
+            filterChangedListener.onBusFilterChanged(filtered);
         }
     }
 
     private String normalize(String input) {
         if (input == null) return "";
-        return java.text.Normalizer.normalize(input, java.text.Normalizer.Form.NFD)
+        return Normalizer.normalize(input, Normalizer.Form.NFD)
                 .replaceAll("\\p{InCombiningDiacriticalMarks}+", "")
                 .toLowerCase();
     }
@@ -178,9 +184,7 @@ public class BusBottomSheetDialogFragment extends BottomSheetDialogFragment {
     @Override
     public void onAttach(@NonNull Context context) {
         super.onAttach(context);
-        if (context instanceof OnBusSelectedListener) {
-            listener = (OnBusSelectedListener) context;
-        } else {
+        if (!(context instanceof OnBusSelectedListener)) {
             throw new RuntimeException(context.toString() + " deve implementar OnBusSelectedListener");
         }
     }

@@ -12,6 +12,7 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.mbus.data.BusInfo;
 import com.example.mbus.data.LocationsRepository;
+import com.example.mbus.listeners.OnBusFilterChangedListener;
 import com.example.mbus.utils.MapUtils;
 import com.example.mbus.utils.MarkerUtils;
 import com.example.mbus.listeners.OnBusSelectedListener;
@@ -44,7 +45,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-public class MapsActivity extends AppCompatActivity implements OnMapReadyCallback, OnBusSelectedListener {
+public class MapsActivity extends AppCompatActivity implements OnMapReadyCallback, OnBusSelectedListener, OnBusFilterChangedListener {
+
 
     private static final String TAG = "MapsActivity";
 
@@ -61,6 +63,8 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     private final List<Marker> locationMarkers = new ArrayList<>();
     private final List<Polyline> currentPolylines = new ArrayList<>();
     private boolean shouldOpenBusMenu = false;
+    private List<BusInfo> pendingFilter = null;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -118,8 +122,13 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         locationsRepository.startListeningBuses(new LocationsRepository.BusListListener() {
             @Override
             public void onBusListUpdate(List<BusInfo> buses) {
-                BusBottomSheetDialogFragment bottomSheet = new BusBottomSheetDialogFragment(buses);
+                BusBottomSheetDialogFragment bottomSheet = new BusBottomSheetDialogFragment(
+                        buses,
+                        MapsActivity.this,
+                        MapsActivity.this
+                );
                 bottomSheet.show(getSupportFragmentManager(), "bus_bottom_sheet");
+
             }
 
             @Override
@@ -157,24 +166,30 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     }
 
     public void applyMapFilter(List<BusInfo> filteredBuses) {
-        if (map == null || routeDataMap.isEmpty()) return;
+        if (map == null) return;
 
-        // Remove marcadores antigos
+        if (locationsRepository.getLastSnapshot() == null) {
+            Log.w(TAG, "Snapshot ainda nulo. Guardando filtro para depois...");
+            pendingFilter = filteredBuses;
+            return;
+        }
+
+        pendingFilter = null;
+
         for (Marker marker : locationMarkers) {
             marker.remove();
         }
         locationMarkers.clear();
 
-        // Lista com IDs filtrados
+        Map<String, Map<String, Object>> snapshot = locationsRepository.getLastSnapshot();
+
         Set<String> idsFiltrados = new HashSet<>();
         for (BusInfo bus : filteredBuses) {
             idsFiltrados.add(bus.getId());
         }
 
-        // Verifica se as localizações estão disponíveis
-        if (locationsRepository.getLastSnapshot() == null) return;
-
-        Map<String, Map<String, Object>> snapshot = locationsRepository.getLastSnapshot();
+        Log.d("Filtro", "IDs filtrados: " + idsFiltrados);
+        Log.d("Snapshot", "IDs disponíveis: " + snapshot.keySet());
 
         Map<String, List<Map<String, Object>>> agrupado = new HashMap<>();
         for (Map.Entry<String, Map<String, Object>> entry : snapshot.entrySet()) {
@@ -233,20 +248,24 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                         marker.setTag(id);
                         locationMarkers.add(marker);
                     }
+
                     index++;
                 }
             }
         }
     }
 
-
-
-
     private void startListeningLocations() {
         locationsRepository.startListening(new LocationsRepository.LocationsListener() {
             @Override
             public void onLocationsUpdate(Map<String, Map<String, Object>> locations) {
                 runOnUiThread(() -> {
+                    if (pendingFilter != null) {
+                        Log.d("MapsActivity", "Aplicando filtro pendente");
+                        applyMapFilter(pendingFilter);
+                        return;
+                    }
+
                     for (Marker oldMarker : locationMarkers) {
                         oldMarker.remove();
                     }
@@ -280,7 +299,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                                         : "Sem rota";
 
                                 int number = route != null ? route.getRouteNumber() : 0;
-                                String colorStr = route != null ? route.getColor() : "#FF0000"; // fallback vermelho
+                                String colorStr = route != null ? route.getColor() : "#FF0000";
                                 int color = Color.RED;
                                 try {
                                     color = Color.parseColor(colorStr);
@@ -304,6 +323,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                                     marker.setTag(id);
                                     locationMarkers.add(marker);
                                 }
+
                                 index++;
                             }
                         }
@@ -398,16 +418,41 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     }
 
     @Override
+    public void onBusFilterChanged(List<BusInfo> filteredBuses) {
+        applyMapFilter(filteredBuses);
+    }
+
+    @Override
     public void onBusSelected(String routeId) {
+        boolean found = false;
+
         for (Marker marker : locationMarkers) {
             if (routeId.equals(marker.getTag())) {
                 marker.showInfoWindow();
                 drawRouteForMarker(routeId);
                 map.animateCamera(CameraUpdateFactory.newLatLng(marker.getPosition()));
+                found = true;
                 break;
             }
         }
+
+        if (!found) {
+            // Tenta aplicar filtro e esperar que o marcador apareça
+            Log.w(TAG, "Marcador não encontrado ainda. Tentando aplicar filtro...");
+
+            List<BusInfo> filtroSimples = new ArrayList<>();
+            BusInfo route = routeDataMap.get(routeId);
+            if (route != null) {
+                route = new BusInfo(routeId, "", route.getRouteNumber(), route.getRouteName(), route.getGeojson(), route.getColor());
+                filtroSimples.add(route);
+                applyMapFilter(filtroSimples);
+            }
+
+            // Delay de 500ms para dar tempo de aparecer
+            new android.os.Handler(getMainLooper()).postDelayed(() -> onBusSelected(routeId), 500);
+        }
     }
+
 
     private Double getDouble(Object obj) {
         if (obj instanceof Double) return (Double) obj;

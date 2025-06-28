@@ -9,6 +9,8 @@ import android.widget.LinearLayout;
 import com.example.mbus.R;
 import com.example.mbus.data.BusInfo;
 import com.example.mbus.data.LocationsRepository;
+import com.example.mbus.listeners.OnBusFilterChangedListener;
+import com.example.mbus.listeners.OnBusSelectedListener;
 import com.google.firebase.analytics.FirebaseAnalytics;
 
 import java.util.List;
@@ -37,10 +39,13 @@ public class NavigationBar {
                     locationsRepository.startListeningBuses(new LocationsRepository.BusListListener() {
                         @Override
                         public void onBusListUpdate(List<BusInfo> buses) {
-                            BusBottomSheetDialogFragment bottomSheet = new BusBottomSheetDialogFragment(buses);
+                            BusBottomSheetDialogFragment bottomSheet = new BusBottomSheetDialogFragment(
+                                    buses,
+                                    mapsActivity,
+                                    mapsActivity
+                            );
                             bottomSheet.show(mapsActivity.getSupportFragmentManager(), "bus_bottom_sheet");
 
-                            // ✅ Log do evento após mostrar o menu
                             FirebaseAnalytics analytics = FirebaseAnalytics.getInstance(activity);
                             Bundle bundle = new Bundle();
                             bundle.putString("navigation_menu", "bus");
