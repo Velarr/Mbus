@@ -35,12 +35,13 @@ public class BusBottomSheetDialogFragment extends BottomSheetDialogFragment {
 
     private final List<BusInfo> busList;
     private OnBusSelectedListener listener;
-    private String selectedCompany = "Todos";
-    private String searchQuery = "";
     private RecyclerView recyclerView;
     private EditText searchEditText;
     private Spinner companySpinner;
     private List<String> companyOptions = new ArrayList<>();
+
+    private static String selectedCompany = "Todos";
+    private static String searchQuery = "";
 
     public BusBottomSheetDialogFragment(List<BusInfo> buses) {
         this.busList = buses;
@@ -65,7 +66,7 @@ public class BusBottomSheetDialogFragment extends BottomSheetDialogFragment {
         searchEditText = contentView.findViewById(R.id.edittext_search);
         companySpinner = contentView.findViewById(R.id.spinner_companhia);
 
-        fetchCompaniesFromFirestore();
+        setupCompanies();
 
         companySpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
@@ -80,6 +81,7 @@ public class BusBottomSheetDialogFragment extends BottomSheetDialogFragment {
             }
         });
 
+        searchEditText.setText(searchQuery);
         searchEditText.addTextChangedListener(new TextWatcher() {
             @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
 
@@ -100,7 +102,7 @@ public class BusBottomSheetDialogFragment extends BottomSheetDialogFragment {
         updateBusList();
     }
 
-    private void fetchCompaniesFromFirestore() {
+    private void setupCompanies() {
         Set<String> companySet = new HashSet<>();
         companySet.add("Todos");
 
@@ -121,7 +123,14 @@ public class BusBottomSheetDialogFragment extends BottomSheetDialogFragment {
         ArrayAdapter<String> adapter = new ArrayAdapter<>(requireContext(), android.R.layout.simple_spinner_item, companyOptions);
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         companySpinner.setAdapter(adapter);
-        companySpinner.setSelection(0);
+
+        int selectedIndex = companyOptions.indexOf(selectedCompany);
+        if (selectedIndex >= 0) {
+            companySpinner.setSelection(selectedIndex);
+        } else {
+            companySpinner.setSelection(0);
+            selectedCompany = "Todos";
+        }
     }
 
     private void updateBusList() {
@@ -132,14 +141,15 @@ public class BusBottomSheetDialogFragment extends BottomSheetDialogFragment {
 
             boolean matchesCompany = selectedCompany.equals("Todos") || companyName.equalsIgnoreCase(selectedCompany);
             boolean matchesSearch = searchQuery.isEmpty()
-                    || String.valueOf(bus.getRouteNumber()).contains(searchQuery)
-                    || bus.getRouteName().toLowerCase().contains(searchQuery.toLowerCase());
+                    || String.valueOf(bus.getRouteNumber()).startsWith(searchQuery)
+                    || normalize(bus.getRouteName()).startsWith(normalize(searchQuery));
 
             if (matchesCompany && matchesSearch) {
                 filtered.add(bus);
             }
         }
 
+        // Atualiza lista da RecyclerView
         recyclerView.setAdapter(new BusAdapter(filtered, id -> {
             if (listener != null) {
                 listener.onBusSelected(id);
@@ -151,6 +161,18 @@ public class BusBottomSheetDialogFragment extends BottomSheetDialogFragment {
 
             dismiss();
         }));
+
+        // Notifica MapsActivity para atualizar os marcadores
+        if (getActivity() instanceof MapsActivity) {
+            ((MapsActivity) getActivity()).applyMapFilter(filtered);
+        }
+    }
+
+    private String normalize(String input) {
+        if (input == null) return "";
+        return java.text.Normalizer.normalize(input, java.text.Normalizer.Form.NFD)
+                .replaceAll("\\p{InCombiningDiacriticalMarks}+", "")
+                .toLowerCase();
     }
 
     @Override

@@ -39,8 +39,10 @@ import org.json.JSONObject;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public class MapsActivity extends AppCompatActivity implements OnMapReadyCallback, OnBusSelectedListener {
 
@@ -153,6 +155,92 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                     Toast.makeText(this, "Falha ao carregar dados de rotas.", Toast.LENGTH_LONG).show();
                 });
     }
+
+    public void applyMapFilter(List<BusInfo> filteredBuses) {
+        if (map == null || routeDataMap.isEmpty()) return;
+
+        // Remove marcadores antigos
+        for (Marker marker : locationMarkers) {
+            marker.remove();
+        }
+        locationMarkers.clear();
+
+        // Lista com IDs filtrados
+        Set<String> idsFiltrados = new HashSet<>();
+        for (BusInfo bus : filteredBuses) {
+            idsFiltrados.add(bus.getId());
+        }
+
+        // Verifica se as localizações estão disponíveis
+        if (locationsRepository.getLastSnapshot() == null) return;
+
+        Map<String, Map<String, Object>> snapshot = locationsRepository.getLastSnapshot();
+
+        Map<String, List<Map<String, Object>>> agrupado = new HashMap<>();
+        for (Map.Entry<String, Map<String, Object>> entry : snapshot.entrySet()) {
+            Map<String, Object> locData = entry.getValue();
+            if (locData == null) continue;
+
+            String id = (String) locData.get("id");
+            if (id == null || !idsFiltrados.contains(id)) continue;
+
+            Double lat = getDouble(locData.get("latitude"));
+            Double lng = getDouble(locData.get("longitude"));
+            if (lat == null || lng == null) continue;
+
+            String key = lat + "," + lng;
+            agrupado.computeIfAbsent(key, k -> new ArrayList<>()).add(locData);
+        }
+
+        for (List<Map<String, Object>> grupo : agrupado.values()) {
+            int index = 0;
+            for (Map<String, Object> locData : grupo) {
+                Double lat = getDouble(locData.get("latitude"));
+                Double lng = getDouble(locData.get("longitude"));
+                String id = (String) locData.get("id");
+
+                if (lat != null && lng != null && id != null && idsFiltrados.contains(id)) {
+                    LatLng originalPos = new LatLng(lat, lng);
+                    LatLng offsetPos = MapUtils.offsetLatLng(originalPos, index);
+
+                    BusInfo route = routeDataMap.get(id);
+                    String markerTitle = (route != null)
+                            ? (route.getRouteNumber() + " - " + route.getRouteName())
+                            : "Sem rota";
+
+                    int number = route != null ? route.getRouteNumber() : 0;
+                    String colorStr = route != null ? route.getColor() : "#FF0000";
+                    int color = Color.RED;
+                    try {
+                        color = Color.parseColor(colorStr);
+                    } catch (IllegalArgumentException ignored) {}
+
+                    Bitmap customIcon = MarkerUtils.createBusMarkerIcon(
+                            this,
+                            number,
+                            75,
+                            color,
+                            Color.WHITE
+                    );
+
+                    MarkerOptions markerOptions = new MarkerOptions()
+                            .position(offsetPos)
+                            .title(markerTitle)
+                            .icon(BitmapDescriptorFactory.fromBitmap(customIcon));
+
+                    Marker marker = map.addMarker(markerOptions);
+                    if (marker != null) {
+                        marker.setTag(id);
+                        locationMarkers.add(marker);
+                    }
+                    index++;
+                }
+            }
+        }
+    }
+
+
+
 
     private void startListeningLocations() {
         locationsRepository.startListening(new LocationsRepository.LocationsListener() {
