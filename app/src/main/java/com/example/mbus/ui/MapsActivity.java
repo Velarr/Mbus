@@ -1,6 +1,7 @@
 package com.example.mbus.ui;
 
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.os.Bundle;
@@ -10,6 +11,7 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.example.mbus.analytics.AnalyticsLogger;
 import com.example.mbus.data.BusInfo;
 import com.example.mbus.data.LocationsRepository;
 import com.example.mbus.listeners.OnBusFilterChangedListener;
@@ -32,8 +34,10 @@ import com.google.android.gms.maps.model.PolylineOptions;
 import com.google.android.gms.maps.model.RoundCap;
 import com.google.firebase.analytics.FirebaseAnalytics;
 import com.google.firebase.firestore.DocumentSnapshot;
+import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.QuerySnapshot;
+import com.google.firebase.firestore.SetOptions;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -44,6 +48,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 
 public class MapsActivity extends AppCompatActivity implements OnMapReadyCallback, OnBusSelectedListener, OnBusFilterChangedListener {
 
@@ -73,7 +78,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
 
         FirebaseAnalytics mFirebaseAnalytics = FirebaseAnalytics.getInstance(this);
         mFirebaseAnalytics.logEvent(FirebaseAnalytics.Event.APP_OPEN, null);
-
+        AnalyticsLogger.logEvent("app_aberto", null);
 
         locationsRepository = new LocationsRepository();
         firestore = FirebaseFirestore.getInstance();
@@ -89,7 +94,34 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
             Toast.makeText(this, "Erro ao carregar o mapa.", Toast.LENGTH_SHORT).show();
         }
 
+        String deviceId = getUniqueDeviceId();
+        Map<String, Object> userData = new HashMap<>();
+        userData.put("status", "online");
+        userData.put("lastSeen", FieldValue.serverTimestamp());
+        firestore.collection("utilizadores").document(deviceId).set(userData, SetOptions.merge());
+
         shouldOpenBusMenu = getIntent().getBooleanExtra("open_bus_menu", false);
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+
+        String deviceId = getUniqueDeviceId();
+        Map<String, Object> userData = new HashMap<>();
+        userData.put("status", "offline");
+        userData.put("lastSeen", FieldValue.serverTimestamp());
+        FirebaseFirestore.getInstance().collection("utilizadores").document(deviceId).set(userData, SetOptions.merge());
+    }
+
+    private String getUniqueDeviceId() {
+        SharedPreferences prefs = getSharedPreferences("mbus_prefs", MODE_PRIVATE);
+        String deviceId = prefs.getString("device_id", null);
+        if (deviceId == null) {
+            deviceId = UUID.randomUUID().toString();
+            prefs.edit().putString("device_id", deviceId).apply();
+        }
+        return deviceId;
     }
 
     @Override
@@ -105,6 +137,8 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                 Toast.makeText(this, "ID da rota não encontrado", Toast.LENGTH_SHORT).show();
                 return true;
             }
+
+            AnalyticsLogger.logEvent("rota_clicada", routeId);
 
             marker.showInfoWindow();
             drawRouteForMarker(routeId);
@@ -122,13 +156,8 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         locationsRepository.startListeningBuses(new LocationsRepository.BusListListener() {
             @Override
             public void onBusListUpdate(List<BusInfo> buses) {
-                BusBottomSheetDialogFragment bottomSheet = new BusBottomSheetDialogFragment(
-                        buses,
-                        MapsActivity.this,
-                        MapsActivity.this
-                );
+                BusBottomSheetDialogFragment bottomSheet = new BusBottomSheetDialogFragment(buses, MapsActivity.this, MapsActivity.this);
                 bottomSheet.show(getSupportFragmentManager(), "bus_bottom_sheet");
-
             }
 
             @Override
@@ -228,7 +257,8 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                     int color = Color.RED;
                     try {
                         color = Color.parseColor(colorStr);
-                    } catch (IllegalArgumentException ignored) {}
+                    } catch (IllegalArgumentException ignored) {
+                    }
 
                     Bitmap customIcon = MarkerUtils.createBusMarkerIcon(
                             this,
@@ -303,7 +333,8 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                                 int color = Color.RED;
                                 try {
                                     color = Color.parseColor(colorStr);
-                                } catch (IllegalArgumentException ignored) {}
+                                } catch (IllegalArgumentException ignored) {
+                                }
 
                                 Bitmap customIcon = MarkerUtils.createBusMarkerIcon(
                                         MapsActivity.this,
@@ -384,7 +415,8 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                         int color = Color.RED;
                         try {
                             color = Color.parseColor(route.getColor());
-                        } catch (IllegalArgumentException ignored) {}
+                        } catch (IllegalArgumentException ignored) {
+                        }
 
                         PolylineOptions polyOpts = new PolylineOptions()
                                 .addAll(points)
@@ -451,8 +483,9 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
             // Delay de 500ms para dar tempo de aparecer
             new android.os.Handler(getMainLooper()).postDelayed(() -> onBusSelected(routeId), 500);
         }
-    }
 
+        AnalyticsLogger.logEvent("rota_clicada", routeId);
+    }
 
     private Double getDouble(Object obj) {
         if (obj instanceof Double) return (Double) obj;
@@ -461,7 +494,8 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         if (obj instanceof String) {
             try {
                 return Double.parseDouble((String) obj);
-            } catch (NumberFormatException ignored) {}
+            } catch (NumberFormatException ignored) {
+            }
         }
         return null;
     }
