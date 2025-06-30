@@ -71,8 +71,8 @@ public class BusBottomSheetDialogFragment extends BottomSheetDialogFragment {
         recyclerView = contentView.findViewById(R.id.bus_list);
         recyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
 
-        searchEditText = contentView.findViewById(R.id.edittext_search);
-        companySpinner = contentView.findViewById(R.id.spinner_companhia);
+        searchEditText = contentView.findViewById(R.id.editSearch);
+        companySpinner = contentView.findViewById(R.id.spinnerCompany);
 
         setupCompanies();
 

@@ -30,10 +30,10 @@
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/editSearch"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
+                android:layout_height="40dp"
+                android:drawableStart="@android:drawable/ic_menu_search"
                 android:hint="Pesquisar rota..."
-                android:inputType="text"
-                android:drawableStart="@android:drawable/ic_menu_search" />
+                android:inputType="text" />
         </com.google.android.material.textfield.TextInputLayout>
 
         <!-- Novo Spinner -->

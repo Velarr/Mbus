@@ -9,11 +9,9 @@
     <color name="white">#FFFFFFFF</color>
     <color name="blue">#3656F4</color>
 
-    <color name="nav_background">#FFFFFF</color> <!-- branco suave -->
-    <color name="nav_icon">#888888</color>
-    <color name="nav_icon_active">#000000</color>
+    <color name="nav_background">#121212</color> <!-- preto suave -->
+    <color name="nav_icon">#BBBBBB</color>
+    <color name="nav_icon_active">#FFFFFF</color>
 
-    <color name="bg_bottomsheet">#FFFFFF</color>
-
-
+    <color name="bg_bottomsheet">#121212</color>
 </resources>

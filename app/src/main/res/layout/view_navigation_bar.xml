@@ -1,15 +1,14 @@
-<?xml version="1.0" encoding="utf-8"?>
 <LinearLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="70dp"
-    android:layout_alignParentBottom="true"
-    android:background="@color/white"
+    android:background="@color/nav_background"
     android:elevation="8dp"
     android:gravity="center"
     android:orientation="horizontal"
     android:padding="8dp">
 
+    <!-- Botão Home -->
     <LinearLayout
         android:id="@+id/btn_home"
         android:layout_width="0dp"
@@ -19,21 +18,22 @@
         android:clickable="true"
         android:focusable="true"
         android:gravity="center"
-        android:orientation="vertical">
+        android:orientation="vertical"
+        android:duplicateParentState="true">
 
         <ImageView
             android:layout_width="32dp"
             android:layout_height="32dp"
             android:contentDescription="@string/bus"
             android:src="@drawable/ic_home"
-            android:tint="@color/blue" />
+            android:tint="@drawable/nav_icon_color" />
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
             android:text="@string/Inicio"
-            android:textColor="@color/blue"
+            android:textColor="@drawable/nav_icon_color"
             android:textSize="12sp" />
     </LinearLayout>
 
@@ -47,21 +47,22 @@
         android:clickable="true"
         android:focusable="true"
         android:gravity="center"
-        android:orientation="vertical">
+        android:orientation="vertical"
+        android:duplicateParentState="true">
 
         <ImageView
             android:layout_width="32dp"
             android:layout_height="32dp"
             android:contentDescription="@string/bus"
             android:src="@drawable/ic_bus"
-            android:tint="@color/blue" />
+            android:tint="@drawable/nav_icon_color" />
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
             android:text="@string/bus"
-            android:textColor="@color/blue"
+            android:textColor="@drawable/nav_icon_color"
             android:textSize="12sp" />
     </LinearLayout>
 
@@ -75,21 +76,22 @@
         android:clickable="true"
         android:focusable="true"
         android:gravity="center"
-        android:orientation="vertical">
+        android:orientation="vertical"
+        android:duplicateParentState="true">
 
         <ImageView
             android:layout_width="32dp"
             android:layout_height="32dp"
             android:contentDescription="Ícone central"
             android:src="@drawable/ic_schedules"
-            android:tint="@color/blue" />
+            android:tint="@drawable/nav_icon_color" />
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
             android:text="Horários"
-            android:textColor="@color/blue"
+            android:textColor="@drawable/nav_icon_color"
             android:textSize="12sp" />
     </LinearLayout>
 
@@ -103,21 +105,22 @@
         android:clickable="true"
         android:focusable="true"
         android:gravity="center"
-        android:orientation="vertical">
+        android:orientation="vertical"
+        android:duplicateParentState="true">
 
         <ImageView
             android:layout_width="32dp"
             android:layout_height="32dp"
             android:contentDescription="@string/settings"
             android:src="@drawable/ic_settings"
-            android:tint="@color/blue" />
+            android:tint="@drawable/nav_icon_color" />
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
             android:text="@string/settings"
-            android:textColor="@color/blue"
+            android:textColor="@drawable/nav_icon_color"
             android:textSize="12sp" />
     </LinearLayout>
 

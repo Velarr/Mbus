@@ -22,6 +22,19 @@ public class NavigationBar {
         LinearLayout btnBus = activity.findViewById(R.id.btn_bus);
         LinearLayout btnSchedules = activity.findViewById(R.id.btn_schedules);
 
+        // Marcar estado atual
+        if (btnHome != null && btnBus != null && btnSchedules != null) {
+            btnHome.setSelected(false);
+            btnBus.setSelected(false);
+            btnSchedules.setSelected(false);
+
+            if (activity instanceof MapsActivity) {
+                btnHome.setSelected(true);
+            } else if (activity instanceof SchedulesActivity) {
+                btnSchedules.setSelected(true);
+            }
+        }
+
         if (btnHome != null) {
             btnHome.setOnClickListener(v -> {
                 if (!(activity instanceof MapsActivity)) {
@@ -80,3 +93,4 @@ public class NavigationBar {
         }
     }
 }
+

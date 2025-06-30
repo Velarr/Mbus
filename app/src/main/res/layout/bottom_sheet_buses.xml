@@ -1,35 +1,58 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/bus_bottom_sheet"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:orientation="vertical"
-    android:padding="16dp"
-    android:background="?android:attr/windowBackground">
+    android:background="@drawable/bg_bottomsheet_rounded"
+    android:padding="16dp">
 
-    <Spinner
-        android:id="@+id/spinner_companhia"
+    <LinearLayout
+        android:id="@+id/filter_container"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="8dp" />
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginBottom="12dp"
+        android:layout_alignParentTop="true">
 
-    <EditText
-        android:id="@+id/edittext_search"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:hint="Pesquisar por número ou nome da rota"
-        android:inputType="text"
-        android:padding="8dp"
-        android:background="@android:drawable/edit_text"
-        android:drawableStart="@android:drawable/ic_menu_search"
-        android:drawablePadding="8dp"
-        android:textColor="?android:attr/textColorPrimary"
-        android:textColorHint="?android:attr/textColorHint"
-        android:layout_marginBottom="12dp" />
+        <com.google.android.material.textfield.TextInputLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginEnd="8dp"
+            app:boxBackgroundMode="outline"
+            app:boxCornerRadiusTopStart="12dp"
+            app:boxCornerRadiusBottomStart="12dp"
+            app:boxCornerRadiusTopEnd="12dp"
+            app:boxCornerRadiusBottomEnd="12dp">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/editSearch"
+                android:layout_width="match_parent"
+                android:layout_height="40dp"
+                android:drawableStart="@android:drawable/ic_menu_search"
+                android:hint="Pesquisar rota..."
+                android:inputType="text"
+                android:textColor="?attr/colorOnBackground"
+                android:textColorHint="?attr/colorOnBackground" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <Spinner
+            android:id="@+id/spinnerCompany"
+            android:layout_width="160dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:popupBackground="?attr/colorSurface"
+            android:backgroundTint="?attr/colorPrimary" />
+    </LinearLayout>
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/bus_list"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:overScrollMode="ifContentScrolls" />
-</LinearLayout>
+        android:layout_below="@id/filter_container"
+        android:overScrollMode="ifContentScrolls"
+        android:clipToPadding="false"
+        android:paddingBottom="8dp" />
+</RelativeLayout>
