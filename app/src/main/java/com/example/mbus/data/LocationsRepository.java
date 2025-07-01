@@ -3,17 +3,11 @@ package com.example.mbus.data;
 import androidx.annotation.NonNull;
 
 import com.google.android.gms.maps.model.LatLng;
-import com.google.firebase.database.DataSnapshot;
-import com.google.firebase.database.DatabaseError;
-import com.google.firebase.database.DatabaseReference;
-import com.google.firebase.database.FirebaseDatabase;
-import com.google.firebase.database.ValueEventListener;
+import com.google.firebase.database.*;
+
 import com.google.firebase.firestore.FirebaseFirestore;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class LocationsRepository {
 
@@ -23,7 +17,6 @@ public class LocationsRepository {
     public Map<String, Map<String, Object>> getLastSnapshot() {
         return lastSnapshot;
     }
-
 
     public interface LocationsListener {
         void onLocationsUpdate(Map<String, Map<String, Object>> locations);
@@ -48,18 +41,23 @@ public class LocationsRepository {
                 Map<String, Map<String, Object>> locations = new HashMap<>();
                 lastKnownLocations.clear();
 
-                for (DataSnapshot child : snapshot.getChildren()) {
-                    Map<String, Object> data = (Map<String, Object>) child.getValue();
-                    if (data != null) {
-                        locations.put(child.getKey(), data);
+                for (DataSnapshot rotaSnapshot : snapshot.getChildren()) {
+                    for (DataSnapshot child : rotaSnapshot.getChildren()) {
+                        Map<String, Object> data = (Map<String, Object>) child.getValue();
+                        if (data != null) {
+                            String uid = child.getKey();
+                            locations.put(uid, data);
 
-                        Double lat = getDouble(data.get("latitude"));
-                        Double lng = getDouble(data.get("longitude"));
-                        if (lat != null && lng != null) {
-                            lastKnownLocations.put(child.getKey(), new LatLng(lat, lng));
+                            Double lat = getDouble(data.get("latitude"));
+                            Double lng = getDouble(data.get("longitude"));
+                            if (lat != null && lng != null) {
+                                lastKnownLocations.put(uid, new LatLng(lat, lng));
+                            }
                         }
                     }
                 }
+
+                lastSnapshot = locations;
                 listener.onLocationsUpdate(locations);
             }
 
@@ -75,29 +73,24 @@ public class LocationsRepository {
     }
 
     public void startListeningBuses(final BusListListener listener) {
-        DatabaseReference locationsRef = FirebaseDatabase.getInstance().getReference("locations");
         locationsRef.addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot snapshot) {
-                if (!snapshot.exists()) {
-                    listener.onBusListUpdate(new ArrayList<>());
-                    return;
-                }
-
                 List<String> idsFirestore = new ArrayList<>();
 
-                for (DataSnapshot child : snapshot.getChildren()) {
-                    Map<String, Object> data = (Map<String, Object>) child.getValue();
-                    if (data != null && data.get("id") != null) {
-                        String idFirestore = (String) data.get("id");
-                        idsFirestore.add(idFirestore);
+                for (DataSnapshot rotaSnapshot : snapshot.getChildren()) {
+                    for (DataSnapshot child : rotaSnapshot.getChildren()) {
+                        Map<String, Object> data = (Map<String, Object>) child.getValue();
+                        if (data != null && data.get("id") != null) {
+                            String idFirestore = (String) data.get("id");
+                            idsFirestore.add(idFirestore);
+                        }
                     }
                 }
 
                 FirebaseFirestore db = FirebaseFirestore.getInstance();
                 Map<String, String> companyMap = new HashMap<>();
 
-                // Primeiro carrega a coleção de companhias
                 db.collection("company").get().addOnSuccessListener(companyQuery -> {
                     for (var doc : companyQuery) {
                         companyMap.put(doc.getId(), doc.getString("name"));
@@ -128,7 +121,7 @@ public class LocationsRepository {
                                         String color = documentSnapshot.getString("color");
 
                                         BusInfo bus = new BusInfo(id, companyId, routeNumber, routeName, geojson, color);
-                                        bus.setCompanyName(companyName); // <<< ESSENCIAL
+                                        bus.setCompanyName(companyName);
                                         buses.add(bus);
                                     }
 
@@ -156,8 +149,6 @@ public class LocationsRepository {
             }
         });
     }
-
-
 
     private Double getDouble(Object obj) {
         if (obj instanceof Double) return (Double) obj;
