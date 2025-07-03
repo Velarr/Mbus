@@ -15,5 +15,6 @@
 
     <color name="bg_bottomsheet">#FFFFFF</color>
 
+    <color name="spinner_text">#000000</color> <!-- preto para modo claro -->
 
 </resources>

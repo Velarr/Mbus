@@ -4,46 +4,62 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="?android:colorBackground"
-    android:padding="8dp"
-    android:fitsSystemWindows="true">
+    android:fitsSystemWindows="true"
+    android:padding="8dp">
 
+    <!-- Container horizontal da barra de pesquisa e spinner -->
     <LinearLayout
         android:id="@+id/filter_container"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center_vertical"
+        android:layout_height="56dp"
+        android:layout_marginTop="8dp"
         android:layout_marginBottom="8dp"
-        android:layout_alignParentTop="true">
+        android:layout_alignParentTop="true"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
 
+        <!-- Campo de pesquisa -->
         <com.google.android.material.textfield.TextInputLayout
             android:layout_width="0dp"
+            android:layout_height="match_parent"
             android:layout_weight="1"
-            android:layout_height="wrap_content"
             android:layout_marginEnd="8dp"
             app:boxBackgroundMode="outline"
             app:boxCornerRadiusTopStart="12dp"
             app:boxCornerRadiusBottomStart="12dp"
             app:boxCornerRadiusTopEnd="12dp"
-            app:boxCornerRadiusBottomEnd="12dp">
+            app:boxCornerRadiusBottomEnd="12dp"
+            app:startIconDrawable="@android:drawable/ic_menu_search"
+            app:startIconTint="?attr/colorControlNormal">
 
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/editSearch"
                 android:layout_width="match_parent"
-                android:layout_height="40dp"
-                android:drawableStart="@android:drawable/ic_menu_search"
+                android:layout_height="match_parent"
                 android:hint="Pesquisar rota..."
-                android:inputType="text" />
+                android:inputType="text"
+                android:paddingVertical="12dp"
+                android:background="@android:color/transparent"
+                android:textColor="?android:textColorPrimary"
+                android:textColorHint="?android:textColorHint" />
         </com.google.android.material.textfield.TextInputLayout>
 
-        <!-- Novo Spinner -->
+        <!-- Spinner de companhias -->
         <Spinner
             android:id="@+id/spinnerCompany"
-            android:layout_width="160dp"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="12dp" />
+            android:layout_width="wrap_content"
+            android:layout_height="40dp"
+            android:layout_marginEnd="8dp"
+            android:paddingHorizontal="12dp"
+            android:background="@drawable/spinner_background"
+            android:popupBackground="@drawable/spinner_dropdown_background"
+            android:dropDownVerticalOffset="8dp"
+            android:gravity="center_vertical" />
+
+
     </LinearLayout>
 
+    <!-- Lista de horários -->
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/recyclerSchedules"
         android:layout_width="match_parent"
@@ -53,10 +69,11 @@
         android:clipToPadding="false"
         android:paddingBottom="72dp" />
 
+    <!-- Barra de navegação inferior -->
     <include
         android:id="@+id/navigation_include"
         layout="@layout/view_navigation_bar"
-        android:layout_alignParentBottom="true"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content" />
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true" />
 </RelativeLayout>

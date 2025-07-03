@@ -139,8 +139,13 @@ public class SchedulesActivity extends AppCompatActivity {
         }
 
         Collections.sort(companies.subList(1, companies.size())); // mantém "Todos" no topo
-        ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, companies);
-        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        ArrayAdapter<String> adapter = new ArrayAdapter<>(
+                this,
+                R.layout.spinner_item,         // layout do item selecionado
+                companies
+        );
+        adapter.setDropDownViewResource(R.layout.spinner_dropdown_item);
+
         spinnerCompany.setAdapter(adapter);
     }
 

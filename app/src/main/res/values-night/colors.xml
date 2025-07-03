@@ -14,4 +14,7 @@
     <color name="nav_icon_active">#FFFFFF</color>
 
     <color name="bg_bottomsheet">#121212</color>
+
+    <color name="spinner_text">#FFFFFF</color> <!-- branco para modo escuro -->
+
 </resources>
