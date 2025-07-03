@@ -5,4 +5,7 @@
     <string name="settings">Definições</string>
     <string name="Inicio">Inicio</string>
     <string name="Todos">Todos</string>
+
+    <string name="google_maps_key">AIzaSyCbC9hK8flH7WifT7uLYNiNpwyWzAcyNHY</string>
+
 </resources>

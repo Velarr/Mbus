@@ -58,4 +58,6 @@ dependencies {
     implementation ("com.google.android.gms:play-services-maps:18.0.2")
 
     implementation ("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
+
+    implementation ("com.google.android.libraries.places:places:3.4.0")
 }

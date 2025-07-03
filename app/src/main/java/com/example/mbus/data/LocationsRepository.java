@@ -1,18 +1,26 @@
 package com.example.mbus.data;
 
 import androidx.annotation.NonNull;
-
 import com.google.android.gms.maps.model.LatLng;
 import com.google.firebase.database.*;
-
+import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
+
+import org.json.JSONArray;
+import org.json.JSONObject;
 
 import java.util.*;
 
 public class LocationsRepository {
 
     private final DatabaseReference locationsRef;
+    private final FirebaseFirestore db = FirebaseFirestore.getInstance();
+    private final Map<String, LatLng> lastKnownLocations = new HashMap<>();
     private Map<String, Map<String, Object>> lastSnapshot = null;
+
+    public LocationsRepository() {
+        locationsRef = FirebaseDatabase.getInstance().getReference("locations");
+    }
 
     public Map<String, Map<String, Object>> getLastSnapshot() {
         return lastSnapshot;
@@ -28,10 +36,13 @@ public class LocationsRepository {
         void onError(String message);
     }
 
-    private final Map<String, LatLng> lastKnownLocations = new HashMap<>();
+    public interface Callback {
+        void onComplete(List<BusRoute> routes);
+        void onError(Exception e);
+    }
 
-    public LocationsRepository() {
-        locationsRef = FirebaseDatabase.getInstance().getReference("locations");
+    public LatLng getLastKnownLocation(String id) {
+        return lastKnownLocations.get(id);
     }
 
     public void startListening(final LocationsListener listener) {
@@ -66,10 +77,6 @@ public class LocationsRepository {
                 listener.onError(error.getMessage());
             }
         });
-    }
-
-    public LatLng getLastKnownLocation(String id) {
-        return lastKnownLocations.get(id);
     }
 
     public void startListeningBuses(final BusListListener listener) {
@@ -148,6 +155,71 @@ public class LocationsRepository {
                 listener.onError(error.getMessage());
             }
         });
+    }
+
+    public void getAllRoutes(Callback callback) {
+        db.collection("routes")
+                .get()
+                .addOnSuccessListener(qs -> {
+                    List<BusRoute> list = new ArrayList<>();
+                    for (DocumentSnapshot doc : qs.getDocuments()) {
+                        String id = doc.getId();
+                        String geojson = doc.getString("geojson");
+                        String routeName = doc.getString("routeName");
+                        Long routeNumberLong = doc.getLong("routeNumber");
+                        int routeNumber = routeNumberLong != null ? routeNumberLong.intValue() : 0;
+                        String color = doc.getString("color");
+
+                        List<List<LatLng>> multiLinePoints = new ArrayList<>();
+
+                        if (geojson != null) {
+                            try {
+                                JSONObject geo = new JSONObject(geojson);
+                                JSONArray features = geo.getJSONArray("features");
+
+                                for (int i = 0; i < features.length(); i++) {
+                                    JSONObject geometry = features.getJSONObject(i).getJSONObject("geometry");
+                                    String type = geometry.getString("type");
+
+                                    if ("LineString".equals(type)) {
+                                        JSONArray coords = geometry.getJSONArray("coordinates");
+                                        List<LatLng> line = new ArrayList<>();
+                                        for (int j = 0; j < coords.length(); j++) {
+                                            JSONArray coord = coords.getJSONArray(j);
+                                            double lng = coord.getDouble(0);
+                                            double lat = coord.getDouble(1);
+                                            line.add(new LatLng(lat, lng));
+                                        }
+                                        multiLinePoints.add(line);
+                                    } else if ("MultiLineString".equals(type)) {
+                                        JSONArray lines = geometry.getJSONArray("coordinates");
+                                        for (int j = 0; j < lines.length(); j++) {
+                                            JSONArray lineCoords = lines.getJSONArray(j);
+                                            List<LatLng> line = new ArrayList<>();
+                                            for (int k = 0; k < lineCoords.length(); k++) {
+                                                JSONArray coord = lineCoords.getJSONArray(k);
+                                                double lng = coord.getDouble(0);
+                                                double lat = coord.getDouble(1);
+                                                line.add(new LatLng(lat, lng));
+                                            }
+                                            multiLinePoints.add(line);
+                                        }
+                                    }
+                                }
+                            } catch (Exception e) {
+                                e.printStackTrace();
+                            }
+                        }
+
+                        if (!multiLinePoints.isEmpty()) {
+                            BusRoute route = new BusRoute(id, multiLinePoints, routeName, routeNumber, color);
+                            list.add(route);
+                        }
+                    }
+
+                    callback.onComplete(list);
+                })
+                .addOnFailureListener(callback::onError);
     }
 
     private Double getDouble(Object obj) {

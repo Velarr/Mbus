@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:padding="12dp"
+    android:background="?attr/selectableItemBackground">
+
+    <View
+        android:id="@+id/route_color"
+        android:layout_width="12dp"
+        android:layout_height="match_parent"
+        android:layout_marginEnd="8dp"
+        android:background="#FF0000"/>
+
+    <LinearLayout
+        android:orientation="vertical"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1">
+
+        <TextView
+            android:id="@+id/route_title"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Número - Nome"
+            android:textStyle="bold"
+            android:textSize="16sp"
+            android:textColor="@android:color/black" />
+
+        <TextView
+            android:id="@+id/route_subtitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="ID: xyz"
+            android:textSize="14sp"
+            android:textColor="#777777" />
+    </LinearLayout>
+</LinearLayout>

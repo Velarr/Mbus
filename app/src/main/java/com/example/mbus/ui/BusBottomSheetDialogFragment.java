@@ -35,6 +35,12 @@ import java.util.Set;
 
 public class BusBottomSheetDialogFragment extends BottomSheetDialogFragment {
 
+    public static BusBottomSheetDialogFragment newInstance(List<BusInfo> buses,
+                                                           OnBusSelectedListener listener,
+                                                           OnBusFilterChangedListener filterListener) {
+        return new BusBottomSheetDialogFragment(buses, listener, filterListener);
+    }
+
     private final List<BusInfo> busList;
     private final OnBusSelectedListener listener;
     private final OnBusFilterChangedListener filterChangedListener;
@@ -53,6 +59,7 @@ public class BusBottomSheetDialogFragment extends BottomSheetDialogFragment {
         this.busList = buses;
         this.listener = listener;
         this.filterChangedListener = filterChangedListener;
+
     }
 
     @Override

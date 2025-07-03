@@ -2,8 +2,18 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:fitsSystemWindows="false"
+    android:fitsSystemWindows="true"
     tools:context=".ui.MapsActivity">
+
+    <!-- Campo de pesquisa (Places Autocomplete) -->
+    <fragment
+        android:id="@+id/autocomplete_fragment"
+        android:name="com.google.android.libraries.places.widget.AutocompleteSupportFragment"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentTop="true"
+        android:layout_margin="8dp"
+        android:background="@android:color/white" />
 
     <!-- Fragmento do mapa -->
     <fragment
@@ -11,7 +21,8 @@
         android:name="com.google.android.gms.maps.SupportMapFragment"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_above="@+id/navigation_include" />
+        android:layout_below="@id/autocomplete_fragment"
+        android:layout_above="@id/navigation_include" />
 
     <!-- Navbar Fixa no fundo da tela -->
     <include

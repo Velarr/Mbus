@@ -1,6 +1,5 @@
 package com.example.mbus.ui;
 
-import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.graphics.Color;
@@ -13,6 +12,7 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.mbus.analytics.AnalyticsLogger;
 import com.example.mbus.data.BusInfo;
+import com.example.mbus.data.BusRoute;
 import com.example.mbus.data.LocationsRepository;
 import com.example.mbus.listeners.OnBusFilterChangedListener;
 import com.example.mbus.utils.MapUtils;
@@ -20,11 +20,13 @@ import com.example.mbus.utils.MarkerUtils;
 import com.example.mbus.listeners.OnBusSelectedListener;
 
 import com.example.mbus.R;
+import com.google.android.gms.common.api.Status;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
+import com.google.android.gms.maps.model.JointType;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.android.gms.maps.model.Marker;
@@ -32,17 +34,24 @@ import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.Polyline;
 import com.google.android.gms.maps.model.PolylineOptions;
 import com.google.android.gms.maps.model.RoundCap;
+import com.google.android.libraries.places.api.Places;
+import com.google.android.libraries.places.api.model.Place;
+import com.google.android.libraries.places.api.model.RectangularBounds;
+import com.google.android.libraries.places.widget.AutocompleteSupportFragment;
+import com.google.android.libraries.places.widget.listener.PlaceSelectionListener;
 import com.google.firebase.analytics.FirebaseAnalytics;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
-import com.google.firebase.firestore.QuerySnapshot;
 import com.google.firebase.firestore.SetOptions;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -59,6 +68,8 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     private static final float DEFAULT_ZOOM = 13f;
 
     private GoogleMap map;
+    private LocationsRepository repo;
+
     private LocationsRepository locationsRepository;
     private FirebaseFirestore firestore;
 
@@ -76,32 +87,69 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_maps);
 
+        // Firebase Analytics
         FirebaseAnalytics mFirebaseAnalytics = FirebaseAnalytics.getInstance(this);
         mFirebaseAnalytics.logEvent(FirebaseAnalytics.Event.APP_OPEN, null);
         AnalyticsLogger.logEvent("app_aberto", null);
 
+        // Firestore e repositorio
         locationsRepository = new LocationsRepository();
+        repo = new LocationsRepository();
+
         firestore = FirebaseFirestore.getInstance();
 
+        // Navigation bar setup
         NavigationBar.setup(this);
 
-        SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
-                .findFragmentById(R.id.map);
+        // Mesmo com a key no Manifest, ainda é obrigatório:
+        Places.initialize(getApplicationContext(), getString(R.string.google_maps_key));
+        AutocompleteSupportFragment autocompleteFragment = (AutocompleteSupportFragment) getSupportFragmentManager().findFragmentById(R.id.autocomplete_fragment);
+        if (autocompleteFragment != null) {
+            // Limites da Ilha da Madeira (sudoeste até nordeste)
+            LatLngBounds madeiraBounds = new LatLngBounds(
+                    new LatLng(32.60, -17.30),
+                    new LatLng(32.80, -16.80)
+            );
 
+            autocompleteFragment.setLocationBias(RectangularBounds.newInstance(madeiraBounds));
+
+            autocompleteFragment.setPlaceFields(Arrays.asList(Place.Field.ID, Place.Field.NAME, Place.Field.LAT_LNG));
+            autocompleteFragment.setOnPlaceSelectedListener(new PlaceSelectionListener() {
+                @Override
+                public void onPlaceSelected(@NonNull Place place) {
+                    LatLng destination = place.getLatLng();
+                    if (destination != null) {
+                        fetchNearestRoutes(destination);
+                    }
+                }
+
+                @Override
+                public void onError(@NonNull Status status) {
+                    Log.e("Places", "Error: " + status.getStatusMessage());
+                }
+            });
+        }
+
+
+        // Mapa
+        SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.map);
         if (mapFragment != null) {
             mapFragment.getMapAsync(this);
         } else {
             Toast.makeText(this, "Erro ao carregar o mapa.", Toast.LENGTH_SHORT).show();
         }
 
+        // Status do utilizador
         String deviceId = getUniqueDeviceId();
         Map<String, Object> userData = new HashMap<>();
         userData.put("status", "online");
         userData.put("lastSeen", FieldValue.serverTimestamp());
         firestore.collection("utilizadores").document(deviceId).set(userData, SetOptions.merge());
 
+        // Intenção para abrir menu de autocarros
         shouldOpenBusMenu = getIntent().getBooleanExtra("open_bus_menu", false);
     }
+
 
     @Override
     protected void onStop() {
@@ -169,29 +217,26 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     }
 
     private void loadAllRoutesFromFirestore() {
-        firestore.collection("routes")
-                .get()
-                .addOnSuccessListener(querySnapshots -> {
-                    for (DocumentSnapshot doc : querySnapshots.getDocuments()) {
-                        String id = doc.getId();
-                        String geojson = doc.getString("geojson");
-                        String color = doc.getString("color");
-                        String routeName = doc.getString("routeName");
-                        Long routeNumber = doc.getLong("routeNumber");
+        firestore.collection("routes").get().addOnSuccessListener(querySnapshots -> {
+            for (DocumentSnapshot doc : querySnapshots.getDocuments()) {
+                String id = doc.getId();
+                String geojson = doc.getString("geojson");
+                String color = doc.getString("color");
+                String routeName = doc.getString("routeName");
+                Long routeNumber = doc.getLong("routeNumber");
 
-                        if (geojson == null || color == null || routeName == null || routeNumber == null) {
-                            continue;
-                        }
+                if (geojson == null || color == null || routeName == null || routeNumber == null) {
+                    continue;
+                }
 
-                        BusInfo routeData = new BusInfo(geojson, color, routeName, routeNumber.intValue());
-                        routeDataMap.put(id, routeData);
-                    }
-                    startListeningLocations();
-                })
-                .addOnFailureListener(e -> {
-                    Log.e(TAG, "Failed to load routes: " + e.getMessage());
-                    Toast.makeText(this, "Falha ao carregar dados de rotas.", Toast.LENGTH_LONG).show();
-                });
+                BusInfo routeData = new BusInfo(geojson, color, routeName, routeNumber.intValue());
+                routeDataMap.put(id, routeData);
+            }
+            startListeningLocations();
+        }).addOnFailureListener(e -> {
+            Log.e(TAG, "Failed to load routes: " + e.getMessage());
+            Toast.makeText(this, "Falha ao carregar dados de rotas.", Toast.LENGTH_LONG).show();
+        });
     }
 
     public void applyMapFilter(List<BusInfo> filteredBuses) {
@@ -248,9 +293,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                     LatLng offsetPos = MapUtils.offsetLatLng(originalPos, index);
 
                     BusInfo route = routeDataMap.get(id);
-                    String markerTitle = (route != null)
-                            ? (route.getRouteNumber() + " - " + route.getRouteName())
-                            : "Sem rota";
+                    String markerTitle = (route != null) ? (route.getRouteNumber() + " - " + route.getRouteName()) : "Sem rota";
 
                     int number = route != null ? route.getRouteNumber() : 0;
                     String colorStr = route != null ? route.getColor() : "#FF0000";
@@ -260,18 +303,9 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                     } catch (IllegalArgumentException ignored) {
                     }
 
-                    Bitmap customIcon = MarkerUtils.createBusMarkerIcon(
-                            this,
-                            number,
-                            75,
-                            color,
-                            Color.WHITE
-                    );
+                    Bitmap customIcon = MarkerUtils.createBusMarkerIcon(this, number, 75, color, Color.WHITE);
 
-                    MarkerOptions markerOptions = new MarkerOptions()
-                            .position(offsetPos)
-                            .title(markerTitle)
-                            .icon(BitmapDescriptorFactory.fromBitmap(customIcon));
+                    MarkerOptions markerOptions = new MarkerOptions().position(offsetPos).title(markerTitle).icon(BitmapDescriptorFactory.fromBitmap(customIcon));
 
                     Marker marker = map.addMarker(markerOptions);
                     if (marker != null) {
@@ -324,9 +358,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                                 LatLng offsetPos = MapUtils.offsetLatLng(originalPos, index);
 
                                 BusInfo route = routeDataMap.get(id);
-                                String markerTitle = (route != null)
-                                        ? (route.getRouteNumber() + " - " + route.getRouteName())
-                                        : "Sem rota";
+                                String markerTitle = (route != null) ? (route.getRouteNumber() + " - " + route.getRouteName()) : "Sem rota";
 
                                 int number = route != null ? route.getRouteNumber() : 0;
                                 String colorStr = route != null ? route.getColor() : "#FF0000";
@@ -336,18 +368,9 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                                 } catch (IllegalArgumentException ignored) {
                                 }
 
-                                Bitmap customIcon = MarkerUtils.createBusMarkerIcon(
-                                        MapsActivity.this,
-                                        number,
-                                        75,
-                                        color,
-                                        Color.WHITE
-                                );
+                                Bitmap customIcon = MarkerUtils.createBusMarkerIcon(MapsActivity.this, number, 75, color, Color.WHITE);
 
-                                MarkerOptions markerOptions = new MarkerOptions()
-                                        .position(offsetPos)
-                                        .title(markerTitle)
-                                        .icon(BitmapDescriptorFactory.fromBitmap(customIcon));
+                                MarkerOptions markerOptions = new MarkerOptions().position(offsetPos).title(markerTitle).icon(BitmapDescriptorFactory.fromBitmap(customIcon));
 
                                 Marker marker = map.addMarker(markerOptions);
                                 if (marker != null) {
@@ -365,9 +388,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
             @Override
             public void onError(String message) {
                 Log.e(TAG, "Location error: " + message);
-                runOnUiThread(() ->
-                        Toast.makeText(MapsActivity.this, "Erro ao carregar localizações.", Toast.LENGTH_SHORT).show()
-                );
+                runOnUiThread(() -> Toast.makeText(MapsActivity.this, "Erro ao carregar localizações.", Toast.LENGTH_SHORT).show());
             }
         });
     }
@@ -418,12 +439,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                         } catch (IllegalArgumentException ignored) {
                         }
 
-                        PolylineOptions polyOpts = new PolylineOptions()
-                                .addAll(points)
-                                .color(color)
-                                .width(8f)
-                                .startCap(new RoundCap())
-                                .endCap(new RoundCap());
+                        PolylineOptions polyOpts = new PolylineOptions().addAll(points).color(color).width(8f).startCap(new RoundCap()).endCap(new RoundCap());
 
                         Polyline polyline = map.addPolyline(polyOpts);
                         currentPolylines.add(polyline);
@@ -486,6 +502,51 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
 
         AnalyticsLogger.logEvent("rota_clicada", routeId);
     }
+
+    private void fetchNearestRoutes(LatLng destination) {
+        locationsRepository.getAllRoutes(new LocationsRepository.Callback() {
+            @Override
+            public void onComplete(List<BusRoute> allRoutes) {
+                List<BusRoute> nearby = new ArrayList<>();
+
+                for (BusRoute route : allRoutes) {
+                    double d = route.minDistanceTo(destination.latitude, destination.longitude);
+                    if (d <= 500) {
+                        nearby.add(route);
+                    }
+                }
+
+                if (nearby.isEmpty()) {
+                    Toast.makeText(MapsActivity.this, "Nenhuma rota próxima encontrada.", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+
+                // converter BusRoute para BusInfo
+                List<BusInfo> result = new ArrayList<>();
+                for (BusRoute route : nearby) {
+                    result.add(new BusInfo(
+                            route.getId(),
+                            "", // companyId
+                            route.getNumber(),
+                            route.getName(),
+                            null, // geojson não é necessário aqui
+                            route.getColor()
+                    ));
+                }
+
+                NearbyRoutesBottomSheetDialogFragment sheet =
+                        NearbyRoutesBottomSheetDialogFragment.newInstance(result, MapsActivity.this);
+                sheet.show(getSupportFragmentManager(), "nearby_buses");
+            }
+
+            @Override
+            public void onError(Exception e) {
+                Log.e("MAPS", "Erro ao buscar rotas", e);
+            }
+        });
+    }
+
+
 
     private Double getDouble(Object obj) {
         if (obj instanceof Double) return (Double) obj;

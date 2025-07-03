@@ -12,10 +12,11 @@
         <!-- Status bar color. -->
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:windowTranslucentStatus">true</item> <item name="android:windowDrawsSystemBarBackgrounds">true</item>
-        <item name="android:fitsSystemWindows">false</item>
+        <item name="android:fitsSystemWindows">true</item>
         <!-- Customize your theme here. -->
         <!-- Desativar a ActionBar -->
         <item name="windowNoTitle">true</item>
+
 
     </style>
 </resources>
