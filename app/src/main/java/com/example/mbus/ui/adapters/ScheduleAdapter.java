@@ -54,20 +54,20 @@ public class ScheduleAdapter extends RecyclerView.Adapter<ScheduleAdapter.ViewHo
             } else if (background instanceof ShapeDrawable) {
                 ((ShapeDrawable) background).getPaint().setColor(bgColor);
             } else {
-                holder.number.setBackgroundColor(bgColor); // fallback
+                holder.number.setBackgroundColor(bgColor);
             }
 
         } catch (Exception e) {
             holder.number.setBackgroundColor(Color.GRAY);
         }
 
-        // Abre a tela de detalhes da rota com os horários de hoje
         holder.itemView.setOnClickListener(view -> {
             Intent intent = new Intent(view.getContext(), ScheduleDetailsActivity.class);
             intent.putExtra("routeId", bus.getId());
             intent.putExtra("routeName", bus.getRouteName());
-            intent.putExtra("routeNumber", bus.getRouteNumber());
+            intent.putExtra("routeNumber", String.valueOf(bus.getRouteNumber()));
             intent.putExtra("companyName", bus.getCompanyName());
+            intent.putExtra("color", bus.getColor());
             view.getContext().startActivity(intent);
         });
     }

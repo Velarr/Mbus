@@ -30,7 +30,7 @@ public class NavigationBar {
 
             if (activity instanceof MapsActivity) {
                 btnHome.setSelected(true);
-            } else if (activity instanceof SchedulesActivity) {
+            } else if (activity instanceof SchedulesActivity || activity instanceof ScheduleDetailsActivity) {
                 btnSchedules.setSelected(true);
             }
         }

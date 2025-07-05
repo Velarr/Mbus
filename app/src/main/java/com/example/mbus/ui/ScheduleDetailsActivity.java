@@ -1,9 +1,9 @@
 package com.example.mbus.ui;
 
+import android.graphics.Color;
 import android.os.Bundle;
 import android.view.Gravity;
 import android.widget.LinearLayout;
-import android.widget.ScrollView;
 import android.widget.TableLayout;
 import android.widget.TableRow;
 import android.widget.TextView;
@@ -17,12 +17,12 @@ import com.google.firebase.firestore.FirebaseFirestore;
 
 import java.util.Collections;
 import java.util.List;
-import java.util.Locale;
+import java.util.Map;
 
 public class ScheduleDetailsActivity extends AppCompatActivity {
 
-    private TextView txtRouteInfo;
-    private LinearLayout colWeekday, colSaturday, colSunday;
+    private TextView txtRouteNumber, txtRouteName;
+    private LinearLayout headerContainer;
     private FirebaseFirestore firestore;
 
     @Override
@@ -30,19 +30,29 @@ public class ScheduleDetailsActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_schedule_details);
 
-        txtRouteInfo = findViewById(R.id.txt_route_info);
-        colWeekday = findViewById(R.id.col_weekday);
-        colSaturday = findViewById(R.id.col_saturday);
-        colSunday = findViewById(R.id.col_sunday);
+        txtRouteNumber = findViewById(R.id.txt_route_number);
+        txtRouteName = findViewById(R.id.txt_route_name);
+        headerContainer = findViewById(R.id.header_container);
 
         firestore = FirebaseFirestore.getInstance();
+
+        NavigationBar.setup(this);
 
         String routeId = getIntent().getStringExtra("routeId");
         String routeName = getIntent().getStringExtra("routeName");
         String routeNumber = getIntent().getStringExtra("routeNumber");
         String companyName = getIntent().getStringExtra("companyName");
+        String color = getIntent().getStringExtra("color");
 
-        txtRouteInfo.setText(companyName + " - " + routeNumber + " " + routeName);
+        txtRouteName.setText(routeName);
+        txtRouteNumber.setText(routeNumber);
+
+        try {
+            int bgColor = Color.parseColor(color);
+            headerContainer.setBackgroundColor(bgColor);
+        } catch (Exception e) {
+            headerContainer.setBackgroundColor(Color.DKGRAY);
+        }
 
         if (routeId != null) {
             loadAllSchedules(routeId);
@@ -57,11 +67,16 @@ public class ScheduleDetailsActivity extends AppCompatActivity {
                 .get()
                 .addOnSuccessListener(documentSnapshot -> {
                     if (documentSnapshot.exists()) {
-                        var schedules = (java.util.Map<String, Object>) documentSnapshot.get("schedules");
+                        Map<String, Object> schedules = (Map<String, Object>) documentSnapshot.get("schedules");
 
-                        showSchedule(schedules, "weekday", colWeekday);
-                        showSchedule(schedules, "saturday", colSaturday);
-                        showSchedule(schedules, "sunday", colSunday);
+                        List<String> weekday = schedules != null && schedules.get("weekday") != null
+                                ? (List<String>) schedules.get("weekday") : Collections.emptyList();
+                        List<String> saturday = schedules != null && schedules.get("saturday") != null
+                                ? (List<String>) schedules.get("saturday") : Collections.emptyList();
+                        List<String> sunday = schedules != null && schedules.get("sunday") != null
+                                ? (List<String>) schedules.get("sunday") : Collections.emptyList();
+
+                        fillScheduleTable(weekday, saturday, sunday);
                     } else {
                         Toast.makeText(this, "Rota não encontrada", Toast.LENGTH_SHORT).show();
                     }
@@ -72,23 +87,44 @@ public class ScheduleDetailsActivity extends AppCompatActivity {
                 });
     }
 
-    private void showSchedule(java.util.Map<String, Object> schedules, String key, LinearLayout column) {
-        column.removeAllViews();
+    private void fillScheduleTable(List<String> weekday, List<String> saturday, List<String> sunday) {
+        TableLayout table = findViewById(R.id.schedule_table);
+        table.removeAllViews();
 
-        if (schedules == null || !schedules.containsKey(key)) return;
+        TableRow headerRow = new TableRow(this);
+        headerRow.addView(createHeaderCell("Dias úteis"));
+        headerRow.addView(createHeaderCell("Sábado"));
+        headerRow.addView(createHeaderCell("Domingos/Feriados"));
+        table.addView(headerRow);
 
-        List<String> times = (List<String>) schedules.get(key);
-        if (times == null || times.isEmpty()) return;
-
-        Collections.sort(times); // Opcional
-
-        for (String time : times) {
-            TextView txt = new TextView(this);
-            txt.setText(time);
-            txt.setGravity(Gravity.CENTER_HORIZONTAL);
-            txt.setPadding(4, 8, 4, 8);
-            txt.setTextSize(16);
-            column.addView(txt);
+        int maxSize = Math.max(weekday.size(), Math.max(saturday.size(), sunday.size()));
+        for (int i = 0; i < maxSize; i++) {
+            TableRow row = new TableRow(this);
+            row.addView(createCell(i < weekday.size() ? weekday.get(i) : ""));
+            row.addView(createCell(i < saturday.size() ? saturday.get(i) : ""));
+            row.addView(createCell(i < sunday.size() ? sunday.get(i) : ""));
+            table.addView(row);
         }
+    }
+
+    private TextView createCell(String text) {
+        TextView tv = new TextView(this);
+        tv.setText(text);
+        tv.setPadding(12, 8, 12, 8);
+        tv.setGravity(Gravity.CENTER);
+        tv.setTextSize(16);
+        tv.setBackgroundResource(R.drawable.cell_border);
+        return tv;
+    }
+
+    private TextView createHeaderCell(String text) {
+        TextView tv = new TextView(this);
+        tv.setText(text);
+        tv.setPadding(12, 12, 12, 12);
+        tv.setGravity(Gravity.CENTER);
+        tv.setTextSize(16);
+        tv.setTypeface(null, android.graphics.Typeface.BOLD);
+        tv.setBackgroundResource(R.drawable.cell_border);
+        return tv;
     }
 }
