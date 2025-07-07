@@ -23,7 +23,7 @@
             android:id="@+id/route_title"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Número - Nome"
+            android:text="@string/NumeroNome"
             android:textStyle="bold"
             android:textSize="16sp"
             android:textColor="@android:color/black" />
@@ -32,7 +32,7 @@
             android:id="@+id/route_subtitle"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="ID: xyz"
+            android:text="@string/xyz"
             android:textSize="14sp"
             android:textColor="#777777" />
     </LinearLayout>

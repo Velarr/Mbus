@@ -10,7 +10,7 @@
         android:id="@+id/nearby_routes_title"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Autocarros perto de si"
+        android:text="@string/autocarrosperto"
         android:textSize="18sp"
         android:textStyle="bold"
         android:textColor="@color/white"

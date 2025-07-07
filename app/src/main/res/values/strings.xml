@@ -7,5 +7,12 @@
     <string name="Todos">Todos</string>
 
     <string name="google_maps_key">AIzaSyCbC9hK8flH7WifT7uLYNiNpwyWzAcyNHY</string>
+    <string name="horarios">Horários</string>
+    <string name="NumeroNome">Número - Nome</string>
+    <string name="xyz">ID: xyz</string>
+    <string name="umdoistress">123</string>
+    <string name="umdoistres">123</string>
+    <string name="nomerota">Nome da Rota</string>
+    <string name="autocarrosperto">Autocarros perto de si</string>
 
 </resources>
