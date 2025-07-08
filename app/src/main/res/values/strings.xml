@@ -13,6 +13,6 @@
     <string name="umdoistress">123</string>
     <string name="umdoistres">123</string>
     <string name="nomerota">Nome da Rota</string>
-    <string name="autocarrosperto">Autocarros perto de si</string>
+    <string name="autocarrosperto">Autocarros que passam perto:</string>
 
 </resources>

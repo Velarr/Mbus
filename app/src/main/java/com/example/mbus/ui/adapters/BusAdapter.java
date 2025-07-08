@@ -74,7 +74,7 @@ public class BusAdapter extends RecyclerView.Adapter<BusAdapter.BusViewHolder> {
             routeNumber = itemView.findViewById(R.id.schedule_number);
             routeName = itemView.findViewById(R.id.schedule_name);
             routeDescription = itemView.findViewById(R.id.schedule_description);
-            favoriteIcon = itemView.findViewById(R.id.favorite_icon); // já presente no XML
+            favoriteIcon = itemView.findViewById(R.id.favorite_icon);
         }
     }
 }

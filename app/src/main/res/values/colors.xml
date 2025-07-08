@@ -22,4 +22,5 @@
     <color name="search_button_background">#000000</color>
     <color name="custom_text">#212121</color>
     <color name="colorOutline">#DDDDDD</color>
+    <color name="cinzento">#5D5D5D</color>
 </resources>

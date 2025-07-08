@@ -18,12 +18,13 @@
         android:background="@drawable/bg_circle"
         android:layout_marginEnd="16dp" />
 
-    <!-- Nome + descrição -->
+    <!-- Nome + descrição + próxima saída -->
     <LinearLayout
         android:orientation="vertical"
         android:layout_width="0dp"
         android:layout_weight="1"
-        android:layout_height="wrap_content">
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_vertical">
 
         <TextView
             android:id="@+id/schedule_name"
@@ -34,13 +35,24 @@
             android:layout_height="wrap_content" />
 
         <TextView
-            android:id="@+id/schedule_description"
-            android:textSize="14sp"
-            android:textColor="?attr/colorOnBackground"
-            android:alpha="0.7"
+            android:id="@+id/tvNextDeparture"
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content" />
+            android:layout_height="wrap_content"
+            android:textColor="@color/cinzento"
+            android:textSize="14sp"
+            android:layout_marginTop="2dp"
+            android:visibility="gone" />
+
+        <TextView
+            android:id="@+id/schedule_description"
+            android:textSize="13sp"
+            android:textColor="@color/cinzento"
+            android:alpha="0.6"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp" />
     </LinearLayout>
+
 
     <!-- Estrelinha -->
     <ImageView
