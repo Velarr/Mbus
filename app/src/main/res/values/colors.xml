@@ -16,6 +16,7 @@
     <color name="bg_bottomsheet">#FFFFFF</color>
 
     <color name="spinner_text">#000000</color>
-    <color name="gray">#282828</color> <!-- preto para modo claro -->
+    <color name="gray">#282828</color>
+    <color name="favorite">#FFD700</color> <!-- preto para modo claro -->
 
 </resources>

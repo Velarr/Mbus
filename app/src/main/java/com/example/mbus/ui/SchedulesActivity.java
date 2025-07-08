@@ -1,5 +1,7 @@
 package com.example.mbus.ui;
 
+import static java.security.AccessController.getContext;
+
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
@@ -50,7 +52,7 @@ public class SchedulesActivity extends AppCompatActivity {
 
         recyclerView = findViewById(R.id.recyclerSchedules);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
-        adapter = new ScheduleAdapter(filteredList);
+        adapter = new ScheduleAdapter(this, filteredList);
         recyclerView.setAdapter(adapter);
 
         editSearch = findViewById(R.id.editSearch);
