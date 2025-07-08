@@ -152,7 +152,7 @@ public class SchedulesActivity extends AppCompatActivity {
     }
 
     private void applyFilter() {
-        filteredList.clear();
+        List<BusInfo> novaLista = new ArrayList<>();
 
         for (BusInfo bus : busList) {
             boolean matchCompany = selectedCompany.equals("Todos") ||
@@ -168,11 +168,12 @@ public class SchedulesActivity extends AppCompatActivity {
                             normalizedRouteName.startsWith(normalizedSearch);
 
             if (matchCompany && matchSearch) {
-                filteredList.add(bus);
+                novaLista.add(bus);
             }
         }
 
-        adapter.notifyDataSetChanged();
+        adapter = new ScheduleAdapter(this, novaLista); // Cria novo adapter com favoritos reordenados
+        recyclerView.setAdapter(adapter);
     }
 
     private String normalize(String input) {

@@ -44,7 +44,7 @@ public class ScheduleAdapter extends RecyclerView.Adapter<ScheduleAdapter.ViewHo
         Collections.sort(buses, (a, b) -> {
             boolean aFav = favoriteIds.contains(a.getId());
             boolean bFav = favoriteIds.contains(b.getId());
-            return Boolean.compare(!aFav, !bFav); // favoritos primeiro
+            return Boolean.compare(!aFav, !bFav); // Favoritos vêm primeiro
         });
     }
 
@@ -64,8 +64,9 @@ public class ScheduleAdapter extends RecyclerView.Adapter<ScheduleAdapter.ViewHo
         holder.name.setText(bus.getRouteName());
 
         String company = bus.getCompanyName() != null ? bus.getCompanyName() : "Rota";
-        holder.description.setText(company + " - " + bus.getRouteName());
+        holder.description.setText(company);
 
+        // Cor de fundo do número
         try {
             int bgColor = Color.parseColor(bus.getColor());
             Drawable background = holder.number.getBackground().mutate();
@@ -81,17 +82,38 @@ public class ScheduleAdapter extends RecyclerView.Adapter<ScheduleAdapter.ViewHo
             holder.number.setBackgroundColor(Color.GRAY);
         }
 
+        // Atualiza o ícone de favorito
+        boolean isFavorite = favoriteIds.contains(bus.getId());
+        holder.favoriteIcon.setImageResource(isFavorite ? R.drawable.ic_star_filled : R.drawable.ic_star_outline);
+
+        // Clique no ícone de favorito
+        holder.favoriteIcon.setOnClickListener(v -> {
+            String busId = bus.getId();
+            if (favoriteIds.contains(busId)) {
+                favoriteIds.remove(busId);
+            } else {
+                favoriteIds.add(busId);
+            }
+
+            // Salva os favoritos atualizados
+            sharedPreferences.edit().putStringSet("favorite_routes", favoriteIds).apply();
+
+            // Reordena e atualiza a lista
+            reorderFavorites();
+            notifyDataSetChanged();
+        });
+
+        // Clique no item abre detalhes
         holder.itemView.setOnClickListener(view -> {
             Intent intent = new Intent(view.getContext(), ScheduleDetailsActivity.class);
             intent.putExtra("routeId", bus.getId());
             intent.putExtra("routeName", bus.getRouteName());
-            intent.putExtra("routeNumber", String.valueOf(bus.getRouteNumber())); // ✅ como antes
+            intent.putExtra("routeNumber", String.valueOf(bus.getRouteNumber()));
             intent.putExtra("companyName", bus.getCompanyName());
             intent.putExtra("color", bus.getColor());
             view.getContext().startActivity(intent);
         });
     }
-
 
     @Override
     public int getItemCount() {
@@ -107,8 +129,7 @@ public class ScheduleAdapter extends RecyclerView.Adapter<ScheduleAdapter.ViewHo
             number = itemView.findViewById(R.id.schedule_number);
             name = itemView.findViewById(R.id.schedule_name);
             description = itemView.findViewById(R.id.schedule_description);
-            favoriteIcon = itemView.findViewById(R.id.favorite_icon); // ainda falta no XML
-
+            favoriteIcon = itemView.findViewById(R.id.favorite_icon); // Precisa existir no XML
         }
     }
 }
