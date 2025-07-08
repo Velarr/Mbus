@@ -19,4 +19,7 @@
     <color name="gray">#282828</color>
     <color name="favorite">#FFD700</color> <!-- preto para modo claro -->
 
+    <color name="search_button_background">#000000</color>
+    <color name="custom_text">#212121</color>
+    <color name="colorOutline">#DDDDDD</color>
 </resources>

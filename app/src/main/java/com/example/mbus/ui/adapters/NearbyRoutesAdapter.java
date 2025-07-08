@@ -59,10 +59,17 @@ public class NearbyRoutesAdapter extends RecyclerView.Adapter<NearbyRoutesAdapte
             );
         }
 
+        // Oculta a estrela (favorito)
+        View favoriteIcon = holder.itemView.findViewById(R.id.favorite_icon);
+        if (favoriteIcon != null) {
+            favoriteIcon.setVisibility(View.GONE);
+        }
+
         holder.itemView.setOnClickListener(v -> {
             if (listener != null) listener.onRouteClick(route.getId());
         });
     }
+
 
     @Override
     public int getItemCount() {

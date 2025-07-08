@@ -17,4 +17,7 @@
 
     <color name="spinner_text">#FFFFFF</color> <!-- branco para modo escuro -->
 
+    <color name="search_button_background">#6200EE</color>
+    <color name="custom_text">#FFFFFF</color>
+    <color name="colorOutline">#444444</color>
 </resources>

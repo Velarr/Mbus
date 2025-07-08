@@ -12,49 +12,56 @@
         android:id="@+id/filter_container"
         android:layout_width="match_parent"
         android:layout_height="56dp"
+        android:layout_alignParentTop="true"
         android:layout_marginTop="8dp"
         android:layout_marginBottom="8dp"
-        android:layout_alignParentTop="true"
+        android:background="@drawable/filter_container_background"
+        android:gravity="center_vertical"
         android:orientation="horizontal"
-        android:gravity="center_vertical">
+        android:padding="8dp">
 
         <!-- Campo de pesquisa -->
-        <com.google.android.material.textfield.TextInputLayout
+        <LinearLayout
             android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="1"
+            android:layout_height="40dp"
             android:layout_marginEnd="8dp"
-            app:boxBackgroundMode="outline"
-            app:boxCornerRadiusTopStart="12dp"
-            app:boxCornerRadiusBottomStart="12dp"
-            app:boxCornerRadiusTopEnd="12dp"
-            app:boxCornerRadiusBottomEnd="12dp"
-            app:startIconDrawable="@android:drawable/ic_menu_search"
-            app:startIconTint="?attr/colorControlNormal">
+            android:layout_weight="1"
+            android:background="@drawable/search_background"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingStart="8dp"
+            android:paddingEnd="8dp">
 
-            <com.google.android.material.textfield.TextInputEditText
+            <ImageView
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:layout_marginEnd="8dp"
+                android:src="@android:drawable/ic_menu_search"
+                android:tint="@color/custom_text" />
+
+            <EditText
                 android:id="@+id/editSearch"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:background="@android:color/transparent"
                 android:hint="Pesquisar rota..."
                 android:inputType="text"
-                android:paddingVertical="12dp"
-                android:background="@android:color/transparent"
-                android:textColor="?android:textColorPrimary"
-                android:textColorHint="?android:textColorHint" />
-        </com.google.android.material.textfield.TextInputLayout>
+                android:textColor="@color/custom_text"
+                android:textColorHint="@color/custom_text" />
+        </LinearLayout>
 
         <!-- Spinner de companhias -->
         <Spinner
             android:id="@+id/spinnerCompany"
-            android:layout_width="wrap_content"
-            android:layout_height="40dp"
-            android:layout_marginEnd="8dp"
-            android:paddingHorizontal="12dp"
-            android:background="@drawable/spinner_background"
-            android:popupBackground="@drawable/spinner_dropdown_background"
+            android:layout_width="160dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:drawableEnd="@android:drawable/arrow_down_float"
             android:dropDownVerticalOffset="8dp"
-            android:gravity="center_vertical" />
+            android:paddingEnd="12dp"
+            android:popupBackground="@drawable/spinner_company_background"
+            android:spinnerMode="dropdown" />
 
 
     </LinearLayout>
@@ -64,8 +71,8 @@
         android:id="@+id/recyclerSchedules"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_below="@id/filter_container"
         android:layout_above="@id/navigation_include"
+        android:layout_below="@id/filter_container"
         android:clipToPadding="false"
         android:paddingBottom="72dp" />
 
