@@ -29,12 +29,14 @@ public class ScheduleAdapter extends RecyclerView.Adapter<ScheduleAdapter.ViewHo
 
     private final List<BusInfo> buses;
     private final Context context;
+    private final boolean showFavorites;
     private final SharedPreferences sharedPreferences;
     private final Set<String> favoriteIds;
 
-    public ScheduleAdapter(Context context, List<BusInfo> buses) {
+    public ScheduleAdapter(Context context, List<BusInfo> buses, boolean showFavorites) {
         this.context = context;
         this.buses = buses;
+        this.showFavorites = showFavorites;
         this.sharedPreferences = context.getSharedPreferences("favorites", Context.MODE_PRIVATE);
         this.favoriteIds = new HashSet<>(sharedPreferences.getStringSet("favorite_routes", new HashSet<>()));
         reorderFavorites();
@@ -82,26 +84,26 @@ public class ScheduleAdapter extends RecyclerView.Adapter<ScheduleAdapter.ViewHo
             holder.number.setBackgroundColor(Color.GRAY);
         }
 
-        // Atualiza o ícone de favorito
-        boolean isFavorite = favoriteIds.contains(bus.getId());
-        holder.favoriteIcon.setImageResource(isFavorite ? R.drawable.ic_star_filled : R.drawable.ic_star_outline);
+        if (showFavorites) {
+            boolean isFavorite = favoriteIds.contains(bus.getId());
+            holder.favoriteIcon.setImageResource(isFavorite ? R.drawable.ic_star_filled : R.drawable.ic_star_outline);
+            holder.favoriteIcon.setVisibility(View.VISIBLE);
 
-        // Clique no ícone de favorito
-        holder.favoriteIcon.setOnClickListener(v -> {
-            String busId = bus.getId();
-            if (favoriteIds.contains(busId)) {
-                favoriteIds.remove(busId);
-            } else {
-                favoriteIds.add(busId);
-            }
+            holder.favoriteIcon.setOnClickListener(v -> {
+                String busId = bus.getId();
+                if (favoriteIds.contains(busId)) {
+                    favoriteIds.remove(busId);
+                } else {
+                    favoriteIds.add(busId);
+                }
 
-            // Salva os favoritos atualizados
-            sharedPreferences.edit().putStringSet("favorite_routes", favoriteIds).apply();
-
-            // Reordena e atualiza a lista
-            reorderFavorites();
-            notifyDataSetChanged();
-        });
+                sharedPreferences.edit().putStringSet("favorite_routes", favoriteIds).apply();
+                reorderFavorites();
+                notifyDataSetChanged();
+            });
+        } else {
+            holder.favoriteIcon.setVisibility(View.GONE);
+        }
 
         // Clique no item abre detalhes
         holder.itemView.setOnClickListener(view -> {

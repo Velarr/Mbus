@@ -52,7 +52,7 @@ public class SchedulesActivity extends AppCompatActivity {
 
         recyclerView = findViewById(R.id.recyclerSchedules);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
-        adapter = new ScheduleAdapter(this, filteredList);
+        adapter = new ScheduleAdapter(this, filteredList, true);
         recyclerView.setAdapter(adapter);
 
         editSearch = findViewById(R.id.editSearch);
@@ -172,7 +172,7 @@ public class SchedulesActivity extends AppCompatActivity {
             }
         }
 
-        adapter = new ScheduleAdapter(this, novaLista); // Cria novo adapter com favoritos reordenados
+        adapter = new ScheduleAdapter(this, novaLista, true); // Cria novo adapter com favoritos reordenados
         recyclerView.setAdapter(adapter);
     }
 

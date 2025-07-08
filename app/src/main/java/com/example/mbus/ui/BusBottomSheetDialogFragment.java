@@ -1,5 +1,6 @@
 package com.example.mbus.ui;
 
+import android.annotation.SuppressLint;
 import android.app.Dialog;
 import android.content.Context;
 import android.content.res.Resources;
@@ -19,8 +20,8 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.mbus.R;
 import com.example.mbus.data.BusInfo;
-import com.example.mbus.listeners.OnBusSelectedListener;
 import com.example.mbus.listeners.OnBusFilterChangedListener;
+import com.example.mbus.listeners.OnBusSelectedListener;
 import com.example.mbus.ui.adapters.BusAdapter;
 import com.google.android.material.bottomsheet.BottomSheetBehavior;
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment;
@@ -31,6 +32,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 
 public class BusBottomSheetDialogFragment extends BottomSheetDialogFragment {
@@ -59,7 +61,6 @@ public class BusBottomSheetDialogFragment extends BottomSheetDialogFragment {
         this.busList = buses;
         this.listener = listener;
         this.filterChangedListener = filterChangedListener;
-
     }
 
     @Override
@@ -71,7 +72,8 @@ public class BusBottomSheetDialogFragment extends BottomSheetDialogFragment {
                 .findViewById(com.google.android.material.R.id.design_bottom_sheet);
         BottomSheetBehavior<FrameLayout> behavior = BottomSheetBehavior.from(bottomSheet);
 
-        int height = (int) (Resources.getSystem().getDisplayMetrics().heightPixels * 0.85);
+        // Reduz a altura para 60%
+        int height = (int) (Resources.getSystem().getDisplayMetrics().heightPixels * 0.60);
         bottomSheet.getLayoutParams().height = height;
         behavior.setPeekHeight(height);
 
@@ -164,6 +166,17 @@ public class BusBottomSheetDialogFragment extends BottomSheetDialogFragment {
             }
         }
 
+        // Ordenar favoritos primeiro (sem mostrar estrela)
+        Set<String> favoriteIds = getContext()
+                .getSharedPreferences("favorites", Context.MODE_PRIVATE)
+                .getStringSet("favorite_routes", new HashSet<>());
+
+        Collections.sort(filtered, (a, b) -> {
+            boolean aFav = favoriteIds.contains(a.getId());
+            boolean bFav = favoriteIds.contains(b.getId());
+            return Boolean.compare(!aFav, !bFav);
+        });
+
         recyclerView.setAdapter(new BusAdapter(filtered, id -> {
             if (listener != null) {
                 listener.onBusSelected(id);
@@ -185,7 +198,7 @@ public class BusBottomSheetDialogFragment extends BottomSheetDialogFragment {
         if (input == null) return "";
         return Normalizer.normalize(input, Normalizer.Form.NFD)
                 .replaceAll("\\p{InCombiningDiacriticalMarks}+", "")
-                .toLowerCase();
+                .toLowerCase(Locale.ROOT);
     }
 
     @Override

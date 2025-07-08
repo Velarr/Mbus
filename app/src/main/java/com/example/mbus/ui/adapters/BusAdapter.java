@@ -4,6 +4,7 @@ import android.graphics.drawable.GradientDrawable;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageView;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
@@ -53,6 +54,9 @@ public class BusAdapter extends RecyclerView.Adapter<BusAdapter.BusViewHolder> {
             circle.setColor(ContextCompat.getColor(holder.itemView.getContext(), R.color.teal_700));
         }
 
+        // Esconde a estrela
+        holder.favoriteIcon.setVisibility(View.GONE);
+
         holder.itemView.setOnClickListener(v -> listener.onBusClick(bus.getId()));
     }
 
@@ -63,12 +67,14 @@ public class BusAdapter extends RecyclerView.Adapter<BusAdapter.BusViewHolder> {
 
     static class BusViewHolder extends RecyclerView.ViewHolder {
         TextView routeNumber, routeName, routeDescription;
+        ImageView favoriteIcon;
 
         public BusViewHolder(@NonNull View itemView) {
             super(itemView);
             routeNumber = itemView.findViewById(R.id.schedule_number);
             routeName = itemView.findViewById(R.id.schedule_name);
             routeDescription = itemView.findViewById(R.id.schedule_description);
+            favoriteIcon = itemView.findViewById(R.id.favorite_icon); // já presente no XML
         }
     }
 }
