@@ -139,12 +139,17 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
             Toast.makeText(this, "Erro ao carregar o mapa.", Toast.LENGTH_SHORT).show();
         }
 
-        // Status do utilizador
-        String deviceId = getUniqueDeviceId();
         Map<String, Object> userData = new HashMap<>();
         userData.put("status", "online");
         userData.put("lastSeen", FieldValue.serverTimestamp());
-        firestore.collection("utilizadores").document(deviceId).set(userData, SetOptions.merge());
+
+        String randomId = UUID.randomUUID().toString(); // cria um ID temporário
+
+        firestore.collection("utilizadores").document(randomId)
+                .set(userData, SetOptions.merge())
+                .addOnSuccessListener(unused -> Log.d("MBus", "🟢 Utilizador online salvo com ID: " + randomId))
+                .addOnFailureListener(e -> Log.e("MBus", "❌ Erro ao salvar status online", e));
+
 
         // Intenção para abrir menu de autocarros
         shouldOpenBusMenu = getIntent().getBooleanExtra("open_bus_menu", false);
