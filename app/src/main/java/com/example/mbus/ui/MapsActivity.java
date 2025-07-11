@@ -147,8 +147,8 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
 
         firestore.collection("utilizadores").document(randomId)
                 .set(userData, SetOptions.merge())
-                .addOnSuccessListener(unused -> Log.d("MBus", "🟢 Utilizador online salvo com ID: " + randomId))
-                .addOnFailureListener(e -> Log.e("MBus", "❌ Erro ao salvar status online", e));
+                .addOnSuccessListener(unused -> Log.d("MBus", "Utilizador online salvo com ID: " + randomId))
+                .addOnFailureListener(e -> Log.e("MBus", "Erro ao salvar status online", e));
 
 
         // Intenção para abrir menu de autocarros

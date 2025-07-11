@@ -12,6 +12,8 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.mbus.R;
 import com.example.mbus.data.BusInfo;
+import com.example.mbus.listeners.ServerTimeCallback;
+import com.example.mbus.utils.ServerTimeFetcher;
 import com.google.firebase.firestore.FirebaseFirestore;
 
 import java.text.SimpleDateFormat;
@@ -90,47 +92,62 @@ public class NearbyRoutesAdapter extends RecyclerView.Adapter<NearbyRoutesAdapte
 
     private void loadNextDeparture(String routeId, TextView textView) {
         FirebaseFirestore db = FirebaseFirestore.getInstance();
-        String field;
-        Calendar calendar = Calendar.getInstance();
-        int day = calendar.get(Calendar.DAY_OF_WEEK);
-        if (day == Calendar.SATURDAY) {
-            field = "saturday";
-        } else if (day == Calendar.SUNDAY) {
-            field = "sunday";
-        } else {
-            field = "weekday";
-        }
 
-        db.collection("routes").document(routeId)
-                .get().addOnSuccessListener(document -> {
-                    textView.setVisibility(View.VISIBLE);
-                    if (document.exists()) {
-                        Object rawSchedule = document.get("schedules." + field);
-                        if (rawSchedule instanceof List) {
-                            List<String> times = (List<String>) rawSchedule;
-                            if (times != null && !times.isEmpty()) {
-                                Collections.sort(times);
-                                String now = new SimpleDateFormat("HH:mm", Locale.getDefault()).format(new Date());
-                                for (String t : times) {
-                                    if (t.compareTo(now) > 0) {
-                                        textView.setText("Próxima saída: " + t);
-                                        return;
+        ServerTimeFetcher.fetchServerTime(new ServerTimeCallback() {
+            @Override
+            public void onTimeReceived(Date serverDate) {
+                Calendar calendar = Calendar.getInstance();
+                calendar.setTime(serverDate);
+
+                String field;
+                int day = calendar.get(Calendar.DAY_OF_WEEK);
+                if (day == Calendar.SATURDAY) {
+                    field = "saturday";
+                } else if (day == Calendar.SUNDAY) {
+                    field = "sunday";
+                } else {
+                    field = "weekday";
+                }
+
+                db.collection("routes").document(routeId)
+                        .get().addOnSuccessListener(document -> {
+                            textView.setVisibility(View.VISIBLE);
+                            if (document.exists()) {
+                                Object rawSchedule = document.get("schedules." + field);
+                                if (rawSchedule instanceof List) {
+                                    List<String> times = (List<String>) rawSchedule;
+                                    if (times != null && !times.isEmpty()) {
+                                        Collections.sort(times);
+                                        String now = new SimpleDateFormat("HH:mm", Locale.getDefault()).format(serverDate);
+                                        for (String t : times) {
+                                            if (t.compareTo(now) > 0) {
+                                                textView.setText("Próxima saída: " + t);
+                                                return;
+                                            }
+                                        }
+                                        textView.setText("Último já saiu");
+                                    } else {
+                                        textView.setText("Sem horários");
                                     }
+                                } else {
+                                    textView.setText("Sem horários");
                                 }
-                                textView.setText("Último já saiu");
                             } else {
                                 textView.setText("Sem horários");
                             }
-                        } else {
-                            textView.setText("Sem horários");
-                        }
-                    } else {
-                        textView.setText("Sem horários");
-                    }
-                }).addOnFailureListener(e -> {
-                    textView.setVisibility(View.VISIBLE);
-                    textView.setText("Erro ao buscar");
-                });
+                        }).addOnFailureListener(e -> {
+                            textView.setVisibility(View.VISIBLE);
+                            textView.setText("Erro ao buscar");
+                        });
+            }
+
+            @Override
+            public void onError(Exception e) {
+                textView.setVisibility(View.VISIBLE);
+                textView.setText("Erro hora servidor");
+            }
+        });
     }
+
 
 }
